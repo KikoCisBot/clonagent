@@ -113,9 +113,13 @@ function safeView(s) {
   };
 }
 
-router.get('/', (req, res) => res.json(safeView(read())));
+router.get('/', (req, res) => {
+  if (!req.session?.user?.isAdmin) return res.status(403).json({ error: 'admin only' });
+  res.json(safeView(read()));
+});
 
 router.patch('/', (req, res) => {
+  if (!req.session?.user?.isAdmin) return res.status(403).json({ error: 'admin only' });
   const patch = req.body || {};
   // Don't overwrite secrets with their masked values
   if (patch.relayKey && patch.relayKey.includes('…')) delete patch.relayKey;
