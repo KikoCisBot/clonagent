@@ -1,0 +1,1 @@
+# mail_client.py uses only Python standard library — imaplib, smtplib, email

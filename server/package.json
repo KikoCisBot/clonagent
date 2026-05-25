@@ -1,0 +1,24 @@
+{
+  "name": "clonagent-server",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "express-session": "^1.18.1",
+    "memorystore": "^1.6.7",
+    "session-file-store": "^1.5.0",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.9.16",
+    "openai": "^4.73.0",
+    "openid-client": "^5.7.0",
+    "stripe": "^17.7.0"
+  }
+}

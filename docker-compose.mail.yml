@@ -1,0 +1,55 @@
+# Optional mail server piece of ClonAgent.
+#
+# Provides per-agent mailboxes at  <local>@${MAIL_DOMAIN}  (default bot.utopiaia.com)
+# so each ClonAgent can have its own SMTP/IMAP inbox without touching the main
+# corporate Outlook.
+#
+# Run only after `scripts/setup-mailserver.sh` has prepared:
+#   - DNS A + MX records on the subdomain
+#   - DKIM keys + the TXT records you must add by hand
+#
+# Usage on the host:
+#   docker compose -f docker-compose.mail.yml up -d
+#
+# Add/remove mailboxes:
+#   docker exec mailserver setup email add bug@bot.utopiaia.com 'pa$$w0rd'
+#   docker exec mailserver setup email del bug@bot.utopiaia.com
+#   docker exec mailserver setup email list
+#
+# ClonAgent's UI calls these via /api/mail (server/lib/mail-server.js).
+services:
+  mailserver:
+    image: ghcr.io/docker-mailserver/docker-mailserver:latest
+    container_name: mailserver
+    hostname: ${MAIL_HOSTNAME:-bot.utopiaia.com}
+    restart: unless-stopped
+    ports:
+      - "25:25"      # SMTP
+      - "143:143"    # IMAP
+      - "465:465"    # ESMTP submissions (TLS)
+      - "587:587"    # ESMTP submission (STARTTLS)
+      - "993:993"    # IMAPS
+    environment:
+      OVERRIDE_HOSTNAME:        ${MAIL_HOSTNAME:-bot.utopiaia.com}
+      ENABLE_FAIL2BAN:          "1"
+      ENABLE_SPAMASSASSIN:      "1"
+      ENABLE_CLAMAV:            "0"
+      SSL_TYPE:                 letsencrypt
+      PERMIT_DOCKER:            none
+      ONE_DIR:                  "1"
+      POSTMASTER_ADDRESS:       postmaster@${MAIL_DOMAIN:-bot.utopiaia.com}
+      LOG_LEVEL:                info
+    volumes:
+      - ./mail/mail-data:/var/mail
+      - ./mail/mail-state:/var/mail-state
+      - ./mail/mail-logs:/var/log/mail
+      - ./mail/config:/tmp/docker-mailserver
+      # Reuse Let's Encrypt certs from the host (already issued by certbot)
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    cap_add:
+      - NET_ADMIN
+      - SYS_PTRACE
+    healthcheck:
+      test: "ss -lntp | grep -q ':25' || exit 1"
+      timeout: 3s
+      retries: 0

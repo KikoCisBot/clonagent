@@ -1,0 +1,22 @@
+services:
+  clonagent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: clonagent:latest
+    container_name: clonagent
+    restart: unless-stopped
+    ports:
+      - "3300:3300"
+    environment:
+      ANTHROPIC_API_KEY:   ${ANTHROPIC_API_KEY:-}
+      LITELLM_URL:         ${LITELLM_URL:-}
+      LITELLM_MASTER_KEY:  ${LITELLM_MASTER_KEY:-}
+      AGENT_RELAY_URL:     ${AGENT_RELAY_URL:-http://host.docker.internal:3201}
+      CLONAGENT_MODEL:     ${CLONAGENT_MODEL:-claude-sonnet-4-5}
+    volumes:
+      # Skills live on the host so that Claude Code (running on the host) can use them
+      - ${HOME}/.claude/skills:/root/.claude/skills
+      - ./server/data:/app/server/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
