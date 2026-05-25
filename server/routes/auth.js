@@ -9,6 +9,8 @@ router.post('/login',           auth.loginBasic);
 router.post('/register',        auth.register);
 router.post('/forgot-password', auth.forgotPassword);
 router.post('/reset-password',  auth.resetPassword);
+router.post('/magic/send',      auth.magicSend);
+router.get ('/magic/verify',    auth.magicVerify);
 router.get ('/oidc/start',      auth.oidcStart);
 router.get ('/oidc/callback',   auth.oidcCallback);
 router.post('/logout',          auth.logout);

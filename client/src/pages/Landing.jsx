@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bot, Mail, Zap, Shield, ArrowRight, CheckCircle2, Inbox, Reply, Sparkles, Code2, Globe } from 'lucide-react';
+import { Bot, Mail, ArrowRight, CheckCircle2, Sparkles, Reply, Globe, Code2, ShoppingCart, Megaphone, GraduationCap, MailOpen } from 'lucide-react';
 
+// ── Pricing card ─────────────────────────────────────────────────────────────
 function PricingCard({ name, price, features, cta, ctaTo, highlight }) {
   return (
     <div className={`card flex flex-col gap-4 ${highlight ? 'border-violet/50 bg-violet/5 relative' : ''}`}>
@@ -30,6 +32,147 @@ function PricingCard({ name, price, features, cta, ctaTo, highlight }) {
   );
 }
 
+// ── Story card — each use case ────────────────────────────────────────────────
+function StoryCard({ icon: Icon, color, persona, role, emails }) {
+  return (
+    <div className="card flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${color}`}>
+          <Icon size={18} />
+        </div>
+        <div>
+          <div className="font-semibold text-slate-100 text-sm">{persona}</div>
+          <div className="text-[11px] text-slate-500">{role}</div>
+        </div>
+      </div>
+      <div className="space-y-2">
+        {emails.map((e, i) => (
+          <div key={i} className={`rounded-lg p-3 text-xs font-mono ${e.out ? 'bg-violet/10 border border-violet/20' : 'bg-surface-2 border border-border-subtle'}`}>
+            <div className="text-[10px] uppercase tracking-wider mb-1 ${e.out ? 'text-violet-400' : 'text-slate-600'}">
+              {e.out ? '← reply' : '→ sends'}
+            </div>
+            <div className={`font-semibold mb-0.5 ${e.out ? 'text-violet-200' : 'text-slate-200'}`}>{e.subject}</div>
+            <div className={e.out ? 'text-violet-300/80' : 'text-slate-400'}>{e.body}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Email capture form ────────────────────────────────────────────────────────
+function EmailCapture() {
+  const [email, setEmail] = useState('');
+  const [state, setState] = useState('idle'); // idle | loading | sent | error
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!email.includes('@')) return;
+    setState('loading');
+    try {
+      const r = await fetch('/api/auth/magic/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      if (!r.ok) throw new Error();
+      setState('sent');
+    } catch {
+      setState('error');
+    }
+  }
+
+  if (state === 'sent') return (
+    <div className="flex flex-col items-center gap-2">
+      <div className="w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center">
+        <MailOpen size={20} className="text-emerald-400" />
+      </div>
+      <p className="text-slate-200 font-medium">Check your inbox</p>
+      <p className="text-sm text-slate-400">We sent a sign-in link to <span className="text-slate-200">{email}</span></p>
+    </div>
+  );
+
+  return (
+    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
+      <input
+        type="email" required
+        value={email}
+        onChange={e => setEmail(e.target.value)}
+        placeholder="your@email.com"
+        className="input flex-1 text-base py-3"
+      />
+      <button type="submit" disabled={state === 'loading'} className="btn-primary px-6 py-3 text-base whitespace-nowrap">
+        {state === 'loading' ? '…' : <>Get started free <ArrowRight size={16} /></>}
+      </button>
+      {state === 'error' && <p className="text-xs text-rose-400 mt-1">Something went wrong. <Link to="/chat" className="underline">Try signing in</Link></p>}
+    </form>
+  );
+}
+
+// ── Main landing ──────────────────────────────────────────────────────────────
+const STORIES = [
+  {
+    icon: ShoppingCart,
+    color: 'bg-emerald-500/15 text-emerald-300',
+    persona: 'Laura',
+    role: 'Selling handmade jewellery online',
+    emails: [
+      { subject: 'Add a "sold out" badge to my shop', body: 'When a product has 0 stock, show a red "Sold out" badge on the card.' },
+      { out: true, subject: 'Re: Add a "sold out" badge ✓ Done', body: 'Badge added and deployed. Products with stock = 0 now show a red badge. Tested on Chrome and mobile.' },
+    ],
+  },
+  {
+    icon: Megaphone,
+    color: 'bg-blue-500/15 text-blue-300',
+    persona: 'Carlos',
+    role: 'Running a digital marketing agency',
+    emails: [
+      { subject: 'Create a landing page for our new client', body: 'Need a landing for "Gym360" — fitness studio in Madrid. URL: gym360.utopiaia.com. Dark theme, modern, with a booking CTA.' },
+      { out: true, subject: 'Re: Landing page for Gym360 ✓ Live', body: 'Landing published at gym360.utopiaia.com — dark theme, hero section, class schedule, and booking button. SSL active.' },
+    ],
+  },
+  {
+    icon: MailOpen,
+    color: 'bg-amber-500/15 text-amber-300',
+    persona: 'Sofía',
+    role: 'Customer support at an e-commerce',
+    emails: [
+      { subject: 'Auto-reply to refund requests', body: 'When a customer emails about a refund, reply acknowledging receipt and saying we\'ll resolve in 24h. Log it in our DB.' },
+      { out: true, subject: 'Re: Auto-reply to refund requests ✓ Active', body: 'Agent configured. Refund emails now get an instant ACK reply and are logged in the refunds table with timestamp and email.' },
+    ],
+  },
+  {
+    icon: GraduationCap,
+    color: 'bg-rose-500/15 text-rose-300',
+    persona: 'Marcos',
+    role: 'Online teacher with 3,000 students',
+    emails: [
+      { subject: 'Build me a quiz for Module 4', body: '10 multiple-choice questions about JavaScript closures. Save results to the DB and show students their score.' },
+      { out: true, subject: 'Re: Quiz for Module 4 ✓ Ready', body: 'Quiz live at learn.utopiaia.com/quiz/module4. 10 questions, results saved to quiz_results table, score shown on submit.' },
+    ],
+  },
+  {
+    icon: Code2,
+    color: 'bg-violet/30 text-violet-300',
+    persona: 'Andrés',
+    role: 'Indie developer, solo founder',
+    emails: [
+      { subject: 'Users getting 500 errors on checkout', body: 'Getting reports since this morning. Stripe webhook might be broken after yesterday\'s deploy.' },
+      { out: true, subject: 'Re: 500 errors on checkout ✓ Fixed', body: 'Found it: the webhook secret was missing from env after the deploy. Added it, restarted, tested 3 purchases — all working.' },
+    ],
+  },
+  {
+    icon: Globe,
+    color: 'bg-cyan-500/15 text-cyan-300',
+    persona: 'Elena',
+    role: 'Small business owner, no tech team',
+    emails: [
+      { subject: 'I need a contact form on my website', body: 'Just a simple form: name, email, message. Send submissions to info@mybusiness.com.' },
+      { out: true, subject: 'Re: Contact form ✓ Live', body: 'Form added to your website. Submissions go to info@mybusiness.com instantly. Spam protection included.' },
+    ],
+  },
+];
+
 export default function Landing() {
   return (
     <div className="min-h-full bg-bg text-slate-200">
@@ -41,90 +184,138 @@ export default function Landing() {
           <span className="font-semibold text-slate-100 text-lg">ClonAgent</span>
         </div>
         <div className="flex items-center gap-4">
-          <a href="#pricing" className="text-sm text-slate-400 hover:text-slate-200 transition">Pricing</a>
-          <Link to="/chat" className="btn-primary text-sm">
-            Sign in <ArrowRight size={14} />
-          </Link>
+          <a href="#stories" className="text-sm text-slate-400 hover:text-slate-200 transition hidden sm:block">Examples</a>
+          <a href="#pricing" className="text-sm text-slate-400 hover:text-slate-200 transition hidden sm:block">Pricing</a>
+          <Link to="/chat" className="text-sm text-slate-400 hover:text-slate-200 transition">Sign in</Link>
         </div>
       </header>
 
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-20 pb-16 text-center">
+      <section className="max-w-6xl mx-auto px-6 pt-20 pb-10 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-violet/30 bg-violet/10 px-3 py-1 text-xs text-violet-300 mb-6">
-          <Mail size={11} /> Your inbox is the interface
+          <Mail size={11} /> Your inbox is the only interface you need
         </div>
         <h1 className="text-4xl sm:text-5xl font-bold text-slate-100 leading-tight mb-4">
-          Fix bugs by sending<br />
-          <span className="text-violet">an email</span>
+          Tell it what you need.<br />
+          <span className="text-violet">Get it done. By email.</span>
         </h1>
-        <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-8">
-          ClonAgent gives every project an AI engineer reachable by email.
-          Send a bug report, get back a deployed fix and a reply with the diff — no dashboards, no tickets, no waiting.
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto mb-10">
+          ClonAgent gives you a personal AI that builds websites, fixes bugs, sets up automations,
+          creates databases and replies to customers — all triggered by a simple email.
+          No code. No dashboards. No complexity.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/chat" className="btn-primary px-6 py-2.5 text-base">
-            Get started free <ArrowRight size={16} />
-          </Link>
-          <a href="#how-it-works" className="btn-ghost px-6 py-2.5 text-base border border-border-subtle">
-            See how it works
-          </a>
-        </div>
+        <EmailCapture />
+        <p className="text-xs text-slate-600 mt-4">Free to start · No credit card required · Sign in with your email</p>
       </section>
 
       {/* Email demo */}
-      <section className="max-w-4xl mx-auto px-6 pb-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          {/* Inbound email */}
+      <section className="max-w-4xl mx-auto px-6 pb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card border-border-subtle">
             <div className="flex items-center gap-2 mb-3 text-xs text-slate-500 uppercase tracking-wider">
-              <Inbox size={12} /> You write
+              <Mail size={12} /> You send
             </div>
             <div className="space-y-2 text-xs font-mono text-slate-400">
-              <div><span className="text-slate-600">To: </span><span className="text-emerald-300">bugbot@myapp.com</span></div>
-              <div><span className="text-slate-600">From: </span>maria@mycompany.com</div>
-              <div><span className="text-slate-600">Subject: </span><span className="text-slate-200">Login button broken on mobile</span></div>
+              <div><span className="text-slate-600">To: </span><span className="text-emerald-300">myagent@bot.utopiaia.com</span></div>
+              <div><span className="text-slate-600">Subject: </span><span className="text-slate-200">Add a newsletter signup to my homepage</span></div>
               <div className="pt-2 border-t border-border-subtle text-slate-300 leading-relaxed">
-                Hey, the login button on mobile doesn't work since yesterday's deploy.
-                Users are getting a 401 on /api/auth/login when the X-Mobile header is set.
+                Put a simple signup form at the bottom of the homepage.
+                Save emails to the subscribers table and send a welcome email.
               </div>
             </div>
           </div>
-
-          {/* Reply */}
           <div className="card border-violet/30 bg-violet/5">
             <div className="flex items-center gap-2 mb-3 text-xs text-violet-400 uppercase tracking-wider">
-              <Reply size={12} /> ClonAgent replies
+              <Reply size={12} /> Agent replies
             </div>
             <div className="space-y-2 text-xs font-mono text-slate-400">
-              <div><span className="text-slate-600">To: </span>maria@mycompany.com</div>
-              <div><span className="text-slate-600">Subject: </span><span className="text-slate-200">Re: Login button broken on mobile ✓ Fixed</span></div>
+              <div><span className="text-slate-600">Subject: </span><span className="text-slate-200">Re: Newsletter signup ✓ Done</span></div>
               <div className="pt-2 border-t border-border-subtle text-slate-300 leading-relaxed space-y-1.5">
-                <p>Fixed and deployed. The middleware was stripping the session cookie when <span className="text-violet-300">X-Mobile: true</span> was present.</p>
-                <p className="text-slate-500">— server/middleware/auth.js line 42<br/>+ added cookie passthrough for mobile header</p>
-                <p className="text-emerald-400">✓ Tests pass · ✓ Deployed to prod</p>
+                <p>Added a signup form to the homepage footer.</p>
+                <p className="text-slate-500">+ pages/index.html (form)<br/>+ api/subscribe.js (saves to DB)<br/>+ welcome email template</p>
+                <p className="text-emerald-400">✓ Deployed · ✓ Tested with 2 signups</p>
               </div>
             </div>
           </div>
         </div>
-        <p className="text-center text-xs text-slate-600 mt-4">Average time from email to deployed fix: ~3 minutes</p>
+      </section>
+
+      {/* Storytelling — real use cases */}
+      <section id="stories" className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
+        <h2 className="text-2xl font-semibold text-slate-100 mb-2">What people use it for</h2>
+        <p className="text-slate-400 mb-10">
+          One email. Your agent reads it, builds it, deploys it, and replies.
+          No technical knowledge required — just describe what you need.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {STORIES.map(s => <StoryCard key={s.persona} {...s} />)}
+        </div>
+      </section>
+
+      {/* Email as interface — key section */}
+      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet/30 bg-violet/10 px-3 py-1 text-xs text-violet-300 mb-4">
+              <Mail size={11} /> Email-first, always
+            </div>
+            <h2 className="text-2xl font-semibold text-slate-100 mb-4">
+              Manage everything from your inbox — no dashboard needed
+            </h2>
+            <p className="text-slate-400 mb-6">
+              Once your agent is running, your email is the control panel.
+              Send commands to your agent's address and it responds instantly.
+            </p>
+            <div className="card font-mono text-xs space-y-2">
+              {[
+                ['!status',                    'Agent status and recent runs'],
+                ['!add team@mycompany.com',     'Give someone access'],
+                ['!remove old@mycompany.com',  'Revoke access'],
+                ['!pause',                     'Pause the agent'],
+                ['!resume',                    'Resume it'],
+                ['!help',                      'See all commands'],
+              ].map(([cmd, desc]) => (
+                <div key={cmd} className="flex items-center gap-3">
+                  <span className="text-violet-300 w-48 flex-shrink-0">{cmd}</span>
+                  <span className="text-slate-500">{desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div className="card py-3">
+              <div className="text-xs text-slate-500 mb-1">You email your agent:</div>
+              <div className="font-mono text-sm text-slate-200">!add maria@mycompany.com</div>
+            </div>
+            <div className="card py-3 border-emerald-500/30 bg-emerald-500/5">
+              <div className="text-xs text-emerald-400 mb-1">Agent replies:</div>
+              <div className="font-mono text-sm text-emerald-200">✅ Added maria@mycompany.com as an authorized sender.</div>
+            </div>
+            <div className="card py-3 mt-4">
+              <div className="text-xs text-slate-500 mb-1">Maria emails the agent:</div>
+              <div className="font-mono text-sm text-slate-200">The prices on the products page are wrong, they show without VAT</div>
+            </div>
+            <div className="card py-3 border-violet/30 bg-violet/5">
+              <div className="text-xs text-violet-400 mb-1">Agent fixes it and replies to Maria:</div>
+              <div className="font-mono text-sm text-violet-200">✓ Fixed. All prices now include 21% VAT. Deployed.</div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
-        <h2 className="text-2xl font-semibold text-slate-100 mb-2">How it works</h2>
-        <p className="text-slate-400 mb-10">Email in. Fix deployed. Reply sent. That's it.</p>
+      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
+        <h2 className="text-2xl font-semibold text-slate-100 mb-2">Set up in 5 minutes</h2>
+        <p className="text-slate-400 mb-10">Describe what you want in the chat. ClonAgent creates the agent for you.</p>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {[
-            { n: '01', icon: Mail,         title: 'Email arrives',    body: 'An authorized sender emails your agent\'s inbox with a bug report or request.' },
-            { n: '02', icon: Bot,          title: 'Claude reads it',  body: 'A full Claude Code session starts — reads your codebase, understands the problem.' },
-            { n: '03', icon: Code2,        title: 'Fix deployed',     body: 'Claude edits files, runs tests, and deploys to your server via SSH or CI.' },
-            { n: '04', icon: Reply,        title: 'Reply sent',       body: 'The sender gets an email with the fix summary, diff, and confirmation.' },
+            { n: '01', title: 'Enter your email',   body: 'No passwords. We send you a link — click it and you\'re in.' },
+            { n: '02', title: 'Describe your agent', body: 'Tell the chat what project it manages and who can email it.' },
+            { n: '03', title: 'Connect your inbox',  body: 'Link a Gmail account. Takes 2 minutes with our guided setup.' },
+            { n: '04', title: 'Done — email away',   body: 'Your agent watches the inbox and acts on every message.' },
           ].map(s => (
             <div key={s.n} className="card">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-2xl font-bold text-violet/25">{s.n}</span>
-                <s.icon size={16} className="text-violet-400" />
-              </div>
+              <div className="text-2xl font-bold text-violet/25 mb-2">{s.n}</div>
               <h3 className="font-semibold text-slate-100 mb-1">{s.title}</h3>
               <p className="text-sm text-slate-400">{s.body}</p>
             </div>
@@ -132,116 +323,20 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Key power: email as interface */}
-      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet/30 bg-violet/10 px-3 py-1 text-xs text-violet-300 mb-4">
-              <Mail size={11} /> The key insight
-            </div>
-            <h2 className="text-2xl font-semibold text-slate-100 mb-4">
-              Email is the only interface your team needs to learn
-            </h2>
-            <p className="text-slate-400 mb-4">
-              No new tools. No new logins. No dashboards to check.
-              Your team already knows how to write an email — that's all it takes to trigger a full AI-powered fix cycle.
-            </p>
-            <p className="text-slate-400 mb-6">
-              Works from any device, any email client, anywhere in the world.
-              If you can write an email, you can ship a fix.
-            </p>
-            <ul className="space-y-3">
-              {[
-                'Report a bug → get it fixed and deployed',
-                'Request a feature → get a PR with the implementation',
-                'Ask a question → get a code-level answer',
-                'Any email client, any device, zero friction',
-              ].map(s => (
-                <li key={s} className="flex items-center gap-3 text-sm text-slate-300">
-                  <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" /> {s}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="space-y-3">
-            {[
-              { from: 'cto@startup.com',     subject: 'Signup rate dropped after last deploy', tag: 'bug' },
-              { from: 'pm@startup.com',       subject: 'Add CSV export to the reports page',   tag: 'feature' },
-              { from: 'support@startup.com',  subject: 'Customer says dashboard loads slowly',  tag: 'perf' },
-              { from: 'cto@startup.com',     subject: 'Re: Signup rate dropped ✓ Fixed',       tag: 'done', done: true },
-            ].map((e, i) => (
-              <div key={i} className={`card py-3 flex items-start justify-between gap-3 ${e.done ? 'border-emerald-500/30 bg-emerald-500/5' : ''}`}>
-                <div className="min-w-0">
-                  <div className="text-xs text-slate-500 mb-0.5">{e.from}</div>
-                  <div className={`text-sm truncate ${e.done ? 'text-emerald-300' : 'text-slate-200'}`}>{e.subject}</div>
-                </div>
-                <span className={`pill flex-shrink-0 ${
-                  e.done       ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                : e.tag === 'bug'     ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30'
-                : e.tag === 'feature' ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                :                       'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                }`}>
-                  {e.tag}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
-        <h2 className="text-2xl font-semibold text-slate-100 mb-2">Everything included</h2>
-        <p className="text-slate-400 mb-10">One agent per project. All the power of Claude Code, triggered by email.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { icon: Shield,  title: 'Allowlist security',    body: 'Only emails from approved addresses trigger a run. Everyone else gets a polite rejection.' },
-            { icon: Bot,     title: 'Full Claude Code session', body: 'Reads files, runs tests, edits code — everything a senior engineer would do.' },
-            { icon: Code2,   title: 'Deploys automatically', body: 'SSH, CI webhook, or any custom deploy script. Ships to prod without anyone touching a keyboard.' },
-            { icon: Reply,   title: 'Replies with the diff', body: 'The reporter gets an email back with what changed, what was tested, and confirmation it\'s live.' },
-            { icon: Zap,     title: 'Live activity feed',    body: 'Watch every Claude tool call in real time from the AgentHub dashboard.' },
-            { icon: Globe,   title: 'Any email provider',    body: 'Gmail OAuth, IMAP, or a self-hosted mailbox — each agent gets its own dedicated inbox.' },
-          ].map(f => (
-            <div key={f.title} className="card flex flex-col gap-3">
-              <div className="w-8 h-8 rounded-lg bg-violet/10 border border-violet/30 flex items-center justify-center">
-                <f.icon size={16} className="text-violet-300" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-slate-100 mb-1">{f.title}</h3>
-                <p className="text-sm text-slate-400">{f.body}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Pricing */}
-      <section className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle" id="pricing">
+      <section id="pricing" className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">
         <h2 className="text-2xl font-semibold text-slate-100 mb-2">Simple pricing</h2>
-        <p className="text-slate-400 mb-10">Start free. Upgrade when you need more agents or runs.</p>
+        <p className="text-slate-400 mb-10">Start free. Upgrade when you need more agents.</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <PricingCard
-            name="Free"
-            price={0}
-            features={['1 agent', '20 runs / month', 'Own Anthropic API key', 'Community support']}
-            cta="Get started free"
-            ctaTo="/chat"
-          />
-          <PricingCard
-            name="Starter"
-            price={29}
-            highlight
-            features={['5 agents', '200 runs / month', 'Platform API key included', 'Email support']}
-            cta="Start Starter"
-            ctaTo="/billing"
-          />
-          <PricingCard
-            name="Pro"
-            price={99}
-            features={['20 agents', 'Unlimited runs', 'Platform API key included', 'Priority support']}
-            cta="Start Pro"
-            ctaTo="/billing"
-          />
+          <PricingCard name="Free" price={0}
+            features={['1 agent', '20 requests / month', 'Own Anthropic API key', 'Community support']}
+            cta="Get started free" ctaTo="/chat" />
+          <PricingCard name="Starter" price={29} highlight
+            features={['5 agents', '200 requests / month', 'Platform API key included', 'Email support']}
+            cta="Start Starter" ctaTo="/billing" />
+          <PricingCard name="Pro" price={99}
+            features={['20 agents', 'Unlimited requests', 'Platform API key included', 'Priority support']}
+            cta="Start Pro" ctaTo="/billing" />
         </div>
       </section>
 
@@ -249,14 +344,12 @@ export default function Landing() {
       <section className="border-t border-border-subtle">
         <div className="max-w-6xl mx-auto px-6 py-16 text-center">
           <h2 className="text-2xl font-semibold text-slate-100 mb-3">
-            Your next bug fix is one email away
+            Your most powerful tool is your inbox
           </h2>
-          <p className="text-slate-400 mb-6 max-w-lg mx-auto">
-            Set up your first agent in minutes. No code changes needed in your project.
+          <p className="text-slate-400 mb-8 max-w-lg mx-auto">
+            Enter your email and be up and running in 5 minutes. No technical setup. No credit card.
           </p>
-          <Link to="/chat" className="btn-primary px-8 py-3 text-base">
-            Get started free <ArrowRight size={16} />
-          </Link>
+          <EmailCapture />
         </div>
       </section>
 

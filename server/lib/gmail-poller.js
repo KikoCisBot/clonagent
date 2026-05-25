@@ -13,6 +13,93 @@ const threadStore   = require('./email-thread-store');
 const agentSessions = require('./agent-sessions');
 const taskQueue     = require('./task-queue');
 
+const COMMAND_PREFIX = '!';
+const HELP_TEXT = `ClonAgent commands — send any of these to manage your agent:
+
+  !help                      Show this message
+  !status                    Agent status
+  !senders                   List authorized senders
+  !add someone@example.com   Add an authorized sender
+  !remove someone@example.com  Remove an authorized sender
+  !pause                     Pause this agent
+  !resume                    Resume this agent
+
+Any other email (no !) is treated as a request and handled by Claude.`;
+
+async function detectAndHandleCommand(agent, msg, threadId, script, skillDir) {
+  const text = ((msg.subject || '') + '\n' + (msg.body || '')).trim();
+  const firstLine = text.split('\n').find(l => l.trim()) || '';
+  if (!firstLine.startsWith(COMMAND_PREFIX)) return false;
+
+  const [rawCmd, ...args] = firstLine.slice(1).trim().split(/\s+/);
+  const cmd = rawCmd.toLowerCase();
+  const configPath = path.join(skillDir, 'config.json');
+  let config = {};
+  try { config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch {}
+
+  let reply = '';
+
+  if (cmd === 'help') {
+    reply = HELP_TEXT;
+  } else if (cmd === 'status') {
+    const fresh = listAgents().find(a => a.id === agent.id) || agent;
+    const senders = config.authorizedSenders || [];
+    reply = `Agent: ${fresh.id}\nStatus: ${fresh.enabled ? '✅ active' : '⏸ paused'}\nAuthorized senders: ${senders.length}\n\nSend !help for all commands.`;
+  } else if (cmd === 'senders') {
+    const senders = config.authorizedSenders || [];
+    reply = senders.length
+      ? 'Authorized senders:\n' + senders.map(s => '  • ' + (typeof s === 'string' ? s : s.email)).join('\n')
+      : 'No authorized senders configured yet.';
+  } else if (cmd === 'add') {
+    const email = args[0];
+    if (!email || !email.includes('@')) {
+      reply = '❌ Usage: !add email@example.com';
+    } else {
+      const senders = config.authorizedSenders || [];
+      if (senders.some(s => (typeof s === 'string' ? s : s.email) === email)) {
+        reply = `ℹ️ ${email} is already authorized.`;
+      } else {
+        config.authorizedSenders = [...senders, email];
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        reply = `✅ Added ${email} as an authorized sender.`;
+      }
+    }
+  } else if (cmd === 'remove') {
+    const email = args[0];
+    if (!email) {
+      reply = '❌ Usage: !remove email@example.com';
+    } else {
+      const before = (config.authorizedSenders || []).length;
+      config.authorizedSenders = (config.authorizedSenders || [])
+        .filter(s => (typeof s === 'string' ? s : s.email) !== email);
+      if (config.authorizedSenders.length === before) {
+        reply = `ℹ️ ${email} was not in the list.`;
+      } else {
+        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+        reply = `✅ Removed ${email}.`;
+      }
+    }
+  } else if (cmd === 'pause') {
+    const { updateAgent } = require('./skill-fs');
+    updateAgent(agent.id, { enabled: false });
+    reply = '⏸ Agent paused. Send !resume to reactivate it.';
+  } else if (cmd === 'resume') {
+    const { updateAgent } = require('./skill-fs');
+    updateAgent(agent.id, { enabled: true });
+    reply = '✅ Agent resumed. Checking for emails every minute.';
+  } else {
+    reply = `❓ Unknown command: !${cmd}\n\nSend !help to see available commands.`;
+  }
+
+  try {
+    await runPython(skillDir, [script, 'reply', threadId, '--body', reply]);
+  } catch (e) {
+    console.error(`[command] reply failed for ${agent.id}: ${e.message}`);
+  }
+  return true;
+}
+
+
 const PYTHON = process.env.PYTHON_BIN || '/usr/bin/env python3';
 const PUBLIC_URL = (process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com').replace(/\/$/, '');
 
@@ -45,6 +132,22 @@ async function checkAgent(agent) {
   for (const [threadId, msgs] of byThread) {
     const last = msgs[msgs.length - 1];
     try {
+      // Check for !commands first — handle them without launching Claude
+      let fullMsg = last;
+      try {
+        const thread = await runPython(skillDir, [script, 'get-thread', threadId]);
+        const lastMsg = thread?.messages?.[thread.messages.length - 1] || thread;
+        fullMsg = { ...last, body: lastMsg?.body || '' };
+      } catch {}
+      const wasCommand = await detectAndHandleCommand(agent, fullMsg, threadId, script, skillDir);
+      if (wasCommand) {
+        for (const m of msgs) {
+          if (m.uid) runPython(skillDir, [script, 'mark-read', m.uid]).catch(() => {});
+        }
+        processed++;
+        continue;
+      }
+
       // Trigger scheduler (it will plan tasks; executor picks them up separately)
       const launch = await launchScheduler(agent, {
         from: last.from, subject: last.subject, threadId,

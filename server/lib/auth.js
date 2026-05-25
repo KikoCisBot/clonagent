@@ -4,10 +4,11 @@
 //   - 'basic' : username + password against the multi-user store (data/users.json)
 //   - 'oidc'  : OpenID Connect (Keycloak, Google, Auth0, etc.)
 const { Issuer, generators } = require('openid-client');
-const crypto   = require('crypto');
-const settings = require('../routes/settings');
-const users    = require('./users');
-const mailer   = require('./mailer');
+const crypto      = require('crypto');
+const settings    = require('../routes/settings');
+const users       = require('./users');
+const mailer      = require('./mailer');
+const magicAuth   = require('./magic-auth');
 
 let oidcClient;
 let oidcReady = false;
@@ -31,7 +32,7 @@ function resetOidc() { oidcReady = false; oidcClient = undefined; }
 
 const PUBLIC_PATHS = [
   /^\/api\/health$/,
-  /^\/api\/auth\/(login|logout|whoami|register|oidc\/(start|callback)|forgot-password|reset-password)$/,
+  /^\/api\/auth\/(login|logout|whoami|register|oidc\/(start|callback)|forgot-password|reset-password|magic\/(send|verify))$/,
   /^\/api\/billing\/(plans|webhook)$/,
   /^\/api\/activity\/sessions(\/.*)?$/,
   /^\/api\/threads\/[^/]+\/events$/,
@@ -149,7 +150,55 @@ function whoami(req, res) {
   });
 }
 
+async function magicSend(req, res) {
+  const { email } = req.body || {};
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'valid email required' });
+
+  // Create account if it doesn't exist yet
+  let u = users.findUserByEmail(email);
+  if (!u) {
+    const username = email.split('@')[0].toLowerCase().replace(/[^a-z0-9._-]/g, '') + '_' + Date.now().toString(36);
+    const tempPw   = crypto.randomBytes(16).toString('hex');
+    const isAdmin  = users.userCount() === 0;
+    u = await users.createUser({ username, password: tempPw, email, name: email.split('@')[0], isAdmin });
+  }
+
+  const token = magicAuth.createToken(email);
+  const link  = `${process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com'}/api/auth/magic/verify?token=${token}`;
+
+  await mailer.send({
+    to: email,
+    subject: 'Your ClonAgent sign-in link',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:auto;color:#e2e8f0;background:#0f1117;padding:32px;border-radius:12px">
+        <h1 style="color:#a78bfa;margin:0 0 8px">Sign in to ClonAgent</h1>
+        <p style="margin:0 0 20px;color:#94a3b8">Click the button below — this link expires in 15 minutes.</p>
+        <a href="${link}" style="display:inline-block;background:#7c5cff;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+          Sign in →
+        </a>
+        <p style="color:#475569;font-size:12px;margin-top:24px">If you didn't request this, ignore this email.</p>
+      </div>`,
+  }).catch(() => {});
+
+  res.json({ ok: true });
+}
+
+async function magicVerify(req, res) {
+  const { token } = req.query;
+  if (!token) return res.redirect('/?error=missing-token');
+
+  const email = magicAuth.consumeToken(token);
+  if (!email) return res.redirect('/?error=expired');
+
+  const u = users.findUserByEmail(email);
+  if (!u) return res.redirect('/?error=user-not-found');
+
+  req.session.user = { sub: u.username, name: u.name, email: u.email, mode: 'basic', isAdmin: u.isAdmin };
+  res.redirect('/chat');
+}
+
 module.exports = {
   requireAuth, loginBasic, register, forgotPassword, resetPassword,
+  magicSend, magicVerify,
   oidcStart, oidcCallback, logout, whoami, resetOidc,
 };
