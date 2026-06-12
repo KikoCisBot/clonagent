@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bot, Mail, ArrowRight, CheckCircle2, Sparkles, Reply, Globe, Code2, ShoppingCart, Megaphone, GraduationCap, MailOpen } from 'lucide-react';
+import { Bot, Mail, ArrowRight, CheckCircle2, Sparkles, Reply, Globe, Code2, ShoppingCart, Megaphone, GraduationCap, MailOpen, Gauge } from 'lucide-react';
+import StoreAudit from '../components/StoreAudit.jsx';
 
 // ── Pricing card ─────────────────────────────────────────────────────────────
 function PricingCard({ name, price, features, cta, ctaTo, highlight }) {
@@ -184,6 +185,7 @@ export default function Landing() {
           <span className="font-semibold text-slate-100 text-lg">ClonAgent</span>
         </div>
         <div className="flex items-center gap-4">
+          <a href="#audit" className="text-sm text-violet-300 hover:text-violet-200 transition inline-flex items-center gap-1"><Gauge size={13} /> Audita tu tienda</a>
           <a href="#stories" className="text-sm text-slate-400 hover:text-slate-200 transition hidden sm:block">Examples</a>
           <a href="#pricing" className="text-sm text-slate-400 hover:text-slate-200 transition hidden sm:block">Pricing</a>
           <Link to="/chat" className="text-sm text-slate-400 hover:text-slate-200 transition">Sign in</Link>
@@ -239,6 +241,9 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Inbound store audit — free lead magnet for ecommerce */}
+      <StoreAudit />
 
       {/* Storytelling — real use cases */}
       <section id="stories" className="max-w-6xl mx-auto px-6 py-16 border-t border-border-subtle">

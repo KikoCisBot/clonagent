@@ -7,6 +7,7 @@ const path = require('path');
 const crypto = require('crypto');
 const fs = require('fs');
 const { startPoller } = require('./lib/gmail-poller');
+const { startNurture } = require('./lib/audit-nurture');
 const { requireAuth } = require('./lib/auth');
 
 const PORT = parseInt(process.env.PORT || '3300', 10);
@@ -59,6 +60,9 @@ app.use('/api/auth',     require('./routes/auth'));
 
 // Health is public
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'clonagent', port: PORT }));
+
+// Public inbound lead magnet — visitors audit their own store, no auth needed.
+app.use('/api/audit-store', require('./routes/audit'));
 
 // Everything below requires auth (depending on settings.auth.mode)
 app.use(requireAuth);
@@ -113,4 +117,8 @@ app.get(/^(?!\/api).*/, (req, res) => {
 app.listen(PORT, () => {
   console.log(`[clonagent] listening on http://localhost:${PORT}`);
   startPoller();
+  // Background inbound-lead nurture worker — isolated so a failure can't take
+  // down the server (it only ever emails people who opted in via the audit form).
+  try { startNurture(); }
+  catch (e) { console.warn('[clonagent] nurture worker did not start:', e.message); }
 });
