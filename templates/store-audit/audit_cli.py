@@ -151,6 +151,47 @@ def cmd_feedback_digest(days: int | None) -> int:
     return 0
 
 
+# ── lead scoring ─────────────────────────────────────────────────────────────────
+# Scores a freelance JOB POSTING (text a client published seeking help) for fit, so
+# the agent prioritizes the relevant ones and skips the noise. This works on demand
+# that was openly posted — it does NOT scrape people or contacts.
+LEAD_SIGNALS = {
+    'woocommerce':   (40, ['woocommerce', 'woo commerce', 'tienda online', 'carrito', 'checkout']),
+    'wordpress':     (30, ['wordpress', 'wp ', 'elementor', 'plugin']),
+    'maintenance':   (20, ['mantenimiento', 'maintenance', 'optimiz', 'velocidad', 'speed',
+                           'seguridad', 'security', 'hackead', 'hacked', 'malware', 'actualiz', 'update']),
+    'location':      (15, ['madrid', 'españa', 'spain', 'español', 'spanish']),
+    'budget':        (10, ['€', 'eur', 'presupuesto', 'budget', '$']),
+}
+# Strong negatives — clearly not our service; drop these.
+LEAD_NEGATIVES = ['shopify', 'prestashop', 'wix', 'squarespace', 'logo', 'diseño de logo',
+                  'social media', 'copywriting', 'redacción', 'data entry', 'app móvil', 'mobile app']
+
+
+def cmd_lead_score(text: str) -> int:
+    t = (text or '').lower()
+    if not t.strip():
+        print(json.dumps({'error': 'empty posting'}, ensure_ascii=False)); return 2
+    score, matched = 0, []
+    for name, (weight, kws) in LEAD_SIGNALS.items():
+        if any(k in t for k in kws):
+            score += weight; matched.append(name)
+    negatives = [n for n in LEAD_NEGATIVES if n in t]
+    score -= 25 * len(negatives)
+    score = max(0, min(100, score))
+    recommended = score >= 45 and 'woocommerce' in matched or score >= 55
+    out = {
+        'score': score,
+        'recommended': bool(recommended),
+        'matched': matched,
+        'negatives': negatives,
+        'reason': ('Encaja: ' + ', '.join(matched) if matched else 'Sin señales de WordPress/WooCommerce') +
+                  (f'. Señales en contra: {", ".join(negatives)}' if negatives else ''),
+    }
+    print(json.dumps(out, ensure_ascii=False, indent=2))
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description='Store-audit skill CLI')
     sub = p.add_subparsers(dest='cmd', required=True)
@@ -169,6 +210,11 @@ def main() -> int:
     fd = fsub.add_parser('digest')
     fd.add_argument('--days', type=int, default=None)
 
+    pl = sub.add_parser('lead', help='score freelance job postings for fit')
+    lsub = pl.add_subparsers(dest='lcmd', required=True)
+    ls = lsub.add_parser('score', help='score a job posting (--text or stdin)')
+    ls.add_argument('--text', help='posting text; if omitted, read from stdin')
+
     args = p.parse_args()
     if args.cmd == 'audit':
         return cmd_audit(args.url)
@@ -177,6 +223,9 @@ def main() -> int:
             return cmd_feedback_add(args)
         if args.fcmd == 'digest':
             return cmd_feedback_digest(args.days)
+    if args.cmd == 'lead':
+        if args.lcmd == 'score':
+            return cmd_lead_score(args.text if args.text is not None else sys.stdin.read())
     p.print_help()
     return 2
 

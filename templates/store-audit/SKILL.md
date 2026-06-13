@@ -137,6 +137,26 @@ Eso es inbound legítimo: el cliente **pidió** propuestas.
 > ⛔ NUNCA auto-apliques en masa ni scrapees estas plataformas: viola sus términos y te
 > banean. Solo propuestas a medida, a ofertas relevantes que el owner selecciona.
 
+### Caso F — Buscador de leads (alertas de ofertas por email)
+Forma legal y sin claves de "buscar leads": el owner crea una **búsqueda guardada** en
+cada plataforma (Upwork, Malt, Freelancer, Workana…) con filtros "WordPress/WooCommerce,
+Madrid" y **alertas por email** a este buzón. Esos correos de "nuevos trabajos" son tu
+fuente. Para cada oferta que llegue así:
+1. Extrae el texto de la oferta del correo y **puntúa el encaje**:
+   `python3 audit_cli.py lead score --text "<texto de la oferta>"` (o por stdin).
+2. Si `recommended` es `false` (no es WordPress/WooCommerce, o hay señales en contra como
+   Shopify/Wix/logo), **descártala** — no pierdas tiempo ni propuestas.
+3. Si `recommended` es `true`: si la oferta trae la URL de la tienda del cliente, audítala
+   (`audit_cli.py audit <url>`) y usa 1-2 hallazgos como gancho. Redacta una propuesta a
+   medida aplicando `learnings.md`.
+4. **Devuelve la propuesta al owner** para que la envíe él en la plataforma (tú no tienes
+   acceso a la cuenta y no debes automatizar el login).
+5. `feedback add --kind proposal --note "<plataforma, oferta, ángulo>"`.
+
+> ⛔ NUNCA: automatizar el login en la plataforma, scrapear ofertas/perfiles, sacar
+> contactos para escribir fuera de la plataforma, ni auto-enviar propuestas. Solo lees las
+> alertas que el owner configuró y preparas propuestas para que las envíe él.
+
 ---
 
 ## 🧠 Protocolo de auto-mejora (lo más importante)
