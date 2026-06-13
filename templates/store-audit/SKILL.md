@@ -149,8 +149,11 @@ fuente. Para cada oferta que llegue así:
 3. Si `recommended` es `true`: si la oferta trae la URL de la tienda del cliente, audítala
    (`audit_cli.py audit <url>`) y usa 1-2 hallazgos como gancho. Redacta una propuesta a
    medida aplicando `learnings.md`.
-4. **Devuelve la propuesta al owner** para que la envíe él en la plataforma (tú no tienes
-   acceso a la cuenta y no debes automatizar el login).
+4. **Envía la propuesta redactada al owner** para que la revise y la publique él en la
+   plataforma (tú no tienes acceso a la cuenta ni debes automatizar el login). Usa el
+   `--to` del cliente de correo para dirigirla al owner, no a la plataforma:
+   `reply <uid> --to <correo-del-owner> --subject "Propuesta: <resumen oferta>" --body-file /tmp/prop.txt`
+   (el owner es el remitente con `role: owner` en la config).
 5. `feedback add --kind proposal --note "<plataforma, oferta, ángulo>"`.
 
 > ⛔ NUNCA: automatizar el login en la plataforma, scrapear ofertas/perfiles, sacar
