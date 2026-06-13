@@ -120,7 +120,7 @@ function reportEmailHtml(report, email) {
     <div style="background:#1a1530;border:1px solid #7c5cff55;border-radius:10px;padding:18px;margin-top:20px">
       <p style="font-weight:600;color:#e2e8f0;margin:0 0 6px">${escapeHtml(report.pitch.headline)}</p>
       <p style="color:#94a3b8;font-size:14px;margin:0 0 14px">${escapeHtml(report.pitch.body)}</p>
-      <a href="mailto:hola@utopiaia.com?subject=Quiero%20el%20mantenimiento%20de%20mi%20tienda"
+      <a href="mailto:tiendas@bot.utopiaia.com?subject=Quiero%20el%20mantenimiento%20de%20mi%20tienda"
          style="display:inline-block;background:#7c5cff;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
         Quiero arreglarlo por ${report.pitch.tier}€/año →
       </a>
@@ -143,7 +143,7 @@ function monitorEmailHtml(report, prev, changes, email) {
       <p style="color:#94a3b8;font-size:14px;margin:0 0 12px">
         Lo mantenemos vigilado y arreglado por ${report.pitch.tier}€/año, sin que tengas que estar pendiente.
       </p>
-      <a href="mailto:hola@utopiaia.com?subject=Mantenimiento%20de%20mi%20tienda"
+      <a href="mailto:tiendas@bot.utopiaia.com?subject=Mantenimiento%20de%20mi%20tienda"
          style="display:inline-block;background:#7c5cff;color:#fff;padding:11px 22px;border-radius:8px;text-decoration:none;font-weight:600">
         Que se encarguen por mí →
       </a>
