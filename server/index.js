@@ -64,6 +64,10 @@ app.get('/api/health', (req, res) => res.json({ ok: true, service: 'clonagent', 
 // Public inbound lead magnet — visitors audit their own store, no auth needed.
 app.use('/api/audit-store', require('./routes/audit'));
 
+// Public SEO landing pages (local SEO → funnel into the audit widget).
+app.get('/mantenimiento-woocommerce-madrid', (req, res) =>
+  res.sendFile(path.join(__dirname, 'seo', 'mantenimiento-woocommerce-madrid.html')));
+
 // Everything below requires auth (depending on settings.auth.mode)
 app.use(requireAuth);
 
