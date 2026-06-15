@@ -362,6 +362,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-600">
           <span>ClonAgent — created by Kiko Cisneros for <a href="https://utopiaia.com" className="text-slate-500 hover:text-slate-400">Utopia IA</a></span>
           <div className="flex gap-4">
+            <a href="/mantenimiento-woocommerce-madrid" className="hover:text-slate-400">Mantenimiento WooCommerce</a>
+            <a href="/zonas-mantenimiento-woocommerce" className="hover:text-slate-400">Zonas</a>
             <Link to="/tos" className="hover:text-slate-400">Terms of Service</Link>
             <Link to="/privacy" className="hover:text-slate-400">Privacy Policy</Link>
             <Link to="/chat" className="hover:text-slate-400">Sign in</Link>

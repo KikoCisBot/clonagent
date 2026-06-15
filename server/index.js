@@ -68,6 +68,20 @@ app.use('/api/audit-store', require('./routes/audit'));
 app.get('/mantenimiento-woocommerce-madrid', (req, res) =>
   res.sendFile(path.join(__dirname, 'seo', 'mantenimiento-woocommerce-madrid.html')));
 
+// Programmatic per-municipality SEO pages (real Spanish municipalities only).
+const seoLocations = require('./seo/locations');
+app.get('/zonas-mantenimiento-woocommerce', (req, res) =>
+  res.type('html').send(seoLocations.renderHub()));
+app.get('/mantenimiento-woocommerce-:loc', (req, res) => {
+  const town = seoLocations.getTown(req.params.loc);
+  if (!town) return res.redirect(302, '/zonas-mantenimiento-woocommerce');
+  res.type('html').send(seoLocations.renderLocationPage(town));
+});
+app.get('/sitemap.xml', (req, res) =>
+  res.type('application/xml').send(seoLocations.renderSitemap()));
+app.get('/robots.txt', (req, res) =>
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nSitemap: ${(process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com').replace(/\/$/, '')}/sitemap.xml\n`));
+
 // Everything below requires auth (depending on settings.auth.mode)
 app.use(requireAuth);
 
