@@ -263,6 +263,9 @@ const server = http.createServer(async (req, res) => {
     };
     const requestedModel = (body.model || 'claude-sonnet-4-6').replace(/^openai\//, '');
     const claudeModel    = MODEL_MAP[requestedModel] || requestedModel;
+    // Optional reasoning effort (low|medium|high|max) — lets callers ask for max thinking.
+    const reqEffort = (body.effort || body.reasoning_effort || '').toString().toLowerCase();
+    const validEffort = ['low','medium','high','max'].includes(reqEffort) ? reqEffort : '';
 
     // Extract system prompt and build user prompt
     const sysParts = messages.filter(m => m.role === 'system').map(m =>
@@ -354,6 +357,7 @@ const server = http.createServer(async (req, res) => {
       '--dangerously-skip-permissions', // allow built-in tools to run within the 1 turn
       '--max-turns', '1', // 1 turn: use tools if needed, then output JSON
     ];
+    if (validEffort) cliArgs.push('--effort', validEffort);
     cliArgs.push('--system-prompt', effectiveSystemPrompt);
     cliArgs.push(userPrompt);
 
