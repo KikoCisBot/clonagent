@@ -283,4 +283,9 @@ function startNurture() {
   console.log(`[nurture] started (new leads: 5min, monitor: daily 09:00${DRY_RUN ? ', DRY-RUN' : ''})`);
 }
 
-module.exports = { startNurture, processNewLeads, runMonitoring, operatorDigest, verifyUnsub, suppress, unsubToken };
+module.exports = {
+  startNurture, processNewLeads, runMonitoring, operatorDigest,
+  verifyUnsub, suppress, unsubToken,
+  // Shared so the CVE monitor works the SAME consented funnel (single source of truth):
+  loadLeads, loadSuppression, unsubUrl,
+};

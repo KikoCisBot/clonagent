@@ -8,6 +8,8 @@ const crypto = require('crypto');
 const fs = require('fs');
 const { startPoller } = require('./lib/gmail-poller');
 const { startNurture } = require('./lib/audit-nurture');
+const { startVulnMonitor } = require('./lib/vuln-monitor');
+const { startWatchdog } = require('./lib/connection-watchdog');
 const { requireAuth } = require('./lib/auth');
 
 const PORT = parseInt(process.env.PORT || '3300', 10);
@@ -60,6 +62,9 @@ app.use('/api/auth',     require('./routes/auth'));
 
 // Health is public
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'clonagent', port: PORT }));
+
+// Mail push webhook — called by mail-watcher.service on the host (no browser session needed)
+app.post('/api/mail/incoming', require('./routes/mail-incoming'));
 
 // Public inbound lead magnet — visitors audit their own store, no auth needed.
 app.use('/api/audit-store', require('./routes/audit'));
@@ -139,4 +144,12 @@ app.listen(PORT, () => {
   // down the server (it only ever emails people who opted in via the audit form).
   try { startNurture(); }
   catch (e) { console.warn('[clonagent] nurture worker did not start:', e.message); }
+  // CVE watch layer on the SAME consented funnel: only alerts owners who opted in
+  // (submitted their own store) about known CVEs on their site. Never cold outreach.
+  try { startVulnMonitor(); }
+  catch (e) { console.warn('[clonagent] vuln monitor did not start:', e.message); }
+  // Connection watchdog — emails the owner if ClonAgent loses its link to the
+  // execution engine for >5 min, and again when it recovers.
+  try { startWatchdog(); }
+  catch (e) { console.warn('[clonagent] watchdog did not start:', e.message); }
 });

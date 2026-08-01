@@ -20,3 +20,5 @@ services:
       - ./server/data:/app/server/data
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "bot.utopiaia.com:172.20.0.2"
+      - "mail.utopiaia.com:172.20.0.2"
