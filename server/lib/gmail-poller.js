@@ -321,9 +321,13 @@ async function tick() {
 }
 
 function startPoller() {
-  // Recover any tasks stuck in-progress from a previous crash
+  // Recover any tasks stuck in-progress from a previous crash, and reconcile
+  // tasks whose dependency failed (they'd otherwise linger as 'pending').
   const agents = listAgents().filter(a => a.enabled && a.ready);
-  for (const a of agents) taskQueue.recoverStaleTasks(a.id);
+  for (const a of agents) {
+    taskQueue.recoverStaleTasks(a.id);
+    taskQueue.reconcileSkips(a.id);
+  }
 
   cron.schedule('* * * * *',   tick);          // email check: every 1 min
   cron.schedule('*/2 * * * *', tickExecutor);  // executor:    every 2 min

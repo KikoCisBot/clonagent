@@ -119,6 +119,35 @@ function hasPending(agentId) {
   return Array.isArray(tasks) && tasks.some(t => t.status === 'pending');
 }
 
+// Mark any pending task whose dependency has 'failed' as 'skipped'.
+// getNextTask skips lazily, but if the only pending task has a failed dep the
+// executor never launches (hasPendingReady is false) and getNextTask is never
+// called — so the task would linger as 'pending' forever. Run this at startup
+// to reconcile that user-visible state.
+function reconcileSkips(agentId) {
+  const queue = read(agentId);
+  const { tasks } = queue;
+  let skipped = 0;
+  for (const task of tasks) {
+    if (task.status !== 'pending' || !task.dependsOn?.length) continue;
+    const failedDep = task.dependsOn
+      .map(id => tasks.find(t => t.id === id))
+      .find(d => d?.status === 'failed');
+    if (!failedDep) continue;
+    task.status = 'skipped';
+    task.updatedAt = new Date().toISOString();
+    task.result = `Skipped: dependency "${failedDep.title || failedDep.id}" failed`;
+    if (!Array.isArray(task.log)) task.log = [];
+    task.log.push({ ts: new Date().toISOString(), msg: task.result });
+    skipped++;
+  }
+  if (skipped > 0) {
+    write(agentId, queue);
+    console.log(`[task-queue] ${agentId}: reconciled ${skipped} task(s) with failed deps → skipped`);
+  }
+  return skipped;
+}
+
 // Reset any 'in-progress' tasks to 'pending' after a crash.
 // Call once on server startup for each agent.
 function recoverStaleTasks(agentId) {
@@ -140,4 +169,4 @@ function recoverStaleTasks(agentId) {
   return recovered;
 }
 
-module.exports = { filePath, read, write, addTask, appendLog, getNextTask, hasPending, hasPendingReady, recoverStaleTasks };
+module.exports = { filePath, read, write, addTask, appendLog, getNextTask, hasPending, hasPendingReady, recoverStaleTasks, reconcileSkips };

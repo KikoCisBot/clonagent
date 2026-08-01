@@ -5,3 +5,7 @@ server/data/
 client/dist/
 *.log
 .DS_Store
+
+# Stray screenshots dropped in the repo root (real assets live in docs/ and client/public/)
+/image.png
+/*.screenshot.png
