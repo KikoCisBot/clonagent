@@ -1,0 +1,1740 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinell — Security Monitoring for Internet-Facing Services</title>
+  <meta name="description" content="Sentinell scans your websites and online services for security vulnerabilities and alerts you before attackers find them." />
+  <meta property="og:title" content="Sentinell — Your services, watched 24/7" />
+  <meta property="og:description" content="Security monitoring for WooCommerce shops, SaaS tools, and any internet-facing service. 30€/year." />
+  <meta property="og:url" content="https://sentinell.utopiaia.com" />
+  <meta property="og:type" content="website" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #0a0f1e;
+      --bg-secondary: #0d1529;
+      --bg-card: #111827;
+      --bg-card-hover: #1a2035;
+      --accent: #3b82f6;
+      --accent-light: #60a5fa;
+      --accent-glow: rgba(59, 130, 246, 0.15);
+      --accent-glow-strong: rgba(59, 130, 246, 0.3);
+      --text-primary: #f0f6ff;
+      --text-secondary: #8ba3c7;
+      --text-muted: #4a6080;
+      --border: rgba(59, 130, 246, 0.12);
+      --border-hover: rgba(59, 130, 246, 0.35);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+      --radius-lg: 20px;
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.15);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ─── NOISE TEXTURE OVERLAY ─── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.4;
+    }
+
+    /* ─── GRID BACKGROUND ─── */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(59, 130, 246, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(59, 130, 246, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── GLOW ORBS ─── */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .orb-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+      top: -150px;
+      left: -100px;
+    }
+    .orb-2 {
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+      bottom: 10%;
+      right: -100px;
+    }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 0 32px;
+      height: 68px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10, 15, 30, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .logo-wordmark {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .logo-wordmark span {
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+      background: var(--accent-glow);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .lang-switcher {
+      display: flex;
+      align-items: center;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .lang-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      letter-spacing: 0.05em;
+    }
+
+    .lang-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .lang-btn:hover:not(.active) {
+      color: var(--text-primary);
+      background: var(--accent-glow);
+    }
+
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .nav-cta:hover {
+      background: var(--accent-light);
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+      transform: translateY(-1px);
+    }
+
+    /* ─── SECTIONS ─── */
+    section {
+      position: relative;
+      z-index: 1;
+    }
+
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 32px;
+    }
+
+    /* ─── HERO ─── */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      padding-top: 68px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+      padding: 80px 0;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hover);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-light);
+      margin-bottom: 24px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .hero-title {
+      font-size: clamp(2.5rem, 5vw, 4rem);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+      color: var(--text-primary);
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(135deg, var(--accent) 0%, #818cf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 40px;
+      max-width: 520px;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-light);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border-hover);
+      padding: 14px 28px;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      color: var(--text-primary);
+      border-color: var(--accent);
+      background: var(--accent-glow);
+    }
+
+    /* HERO VISUAL */
+    .hero-visual {
+      position: relative;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .terminal-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: var(--shadow-card), var(--shadow-glow);
+      position: relative;
+    }
+
+    .terminal-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .dot-red { background: #ff5f57; }
+    .dot-yellow { background: #febc2e; }
+    .dot-green { background: #28c840; }
+
+    .terminal-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .scan-line {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.8;
+      padding: 3px 0;
+    }
+
+    .scan-line .prefix {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .scan-line .ok { color: var(--success); }
+    .scan-line .warn { color: var(--warning); }
+    .scan-line .err { color: var(--danger); }
+    .scan-line .dim { color: var(--text-muted); }
+    .scan-line .text { color: var(--text-secondary); }
+
+    .scan-alert {
+      margin-top: 16px;
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .alert-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #f87171;
+      margin-bottom: 6px;
+    }
+
+    .alert-body {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 14px;
+      background: var(--accent);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+      margin-left: 2px;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      margin-top: 48px;
+    }
+
+    .stat {
+      text-align: left;
+    }
+
+    .stat-value {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--accent-light);
+      letter-spacing: -0.02em;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ─── HOW IT WORKS ─── */
+    #how {
+      padding: 120px 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(13, 21, 41, 0.5) 50%, transparent 100%);
+    }
+
+    .section-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .section-sub {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-header .section-sub {
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 52px;
+      left: calc(16.66% + 16px);
+      right: calc(16.66% + 16px);
+      height: 1px;
+      background: linear-gradient(90deg, var(--accent) 0%, var(--border) 50%, var(--accent) 100%);
+      opacity: 0.4;
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .step-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hover);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--accent-light);
+      margin: 0 auto 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-icon {
+      font-size: 1.5rem;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .step-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .step-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* ─── WHAT WE DETECT ─── */
+    #detect {
+      padding: 120px 0;
+    }
+
+    .detect-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 64px;
+    }
+
+    .detect-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .detect-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .detect-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .detect-card:hover::before {
+      opacity: 1;
+    }
+
+    .detect-icon-wrap {
+      width: 52px;
+      height: 52px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hover);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      margin-bottom: 20px;
+    }
+
+    .detect-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .detect-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    .detect-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 16px;
+    }
+
+    .tag {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.18);
+      color: var(--accent-light);
+      font-size: 0.72rem;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 9px;
+      border-radius: 4px;
+    }
+
+    /* ─── WHO IT'S FOR ─── */
+    #who {
+      padding: 120px 0;
+      background: linear-gradient(180deg, transparent 0%, rgba(13, 21, 41, 0.5) 50%, transparent 100%);
+    }
+
+    .who-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 64px;
+    }
+
+    .who-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px 28px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .who-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-card);
+    }
+
+    .who-emoji {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .who-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .who-desc {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* ─── PRICING ─── */
+    #pricing {
+      padding: 120px 0;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      max-width: 800px;
+      margin: 64px auto 0;
+    }
+
+    .pricing-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 40px 36px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .pricing-card.featured {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(59, 130, 246, 0.06) 100%);
+      box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), var(--shadow-glow);
+    }
+
+    .pricing-badge {
+      position: absolute;
+      top: -14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 14px;
+      border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .plan-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+
+    .plan-price {
+      font-size: 3rem;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .plan-price sup {
+      font-size: 1.2rem;
+      font-weight: 700;
+      vertical-align: top;
+      margin-top: 8px;
+    }
+
+    .plan-period {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .plan-features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+
+    .plan-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .plan-features li:last-child {
+      border-bottom: none;
+    }
+
+    .feature-check {
+      color: var(--success);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .plan-cta {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      border: 1px solid var(--border-hover);
+      background: transparent;
+      color: var(--text-primary);
+    }
+
+    .plan-cta:hover {
+      background: var(--accent-glow);
+      border-color: var(--accent);
+    }
+
+    .plan-cta.cta-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.35);
+    }
+
+    .plan-cta.cta-primary:hover {
+      background: var(--accent-light);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
+      transform: translateY(-1px);
+    }
+
+    /* ─── MODAL ─── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.25s ease;
+      padding: 24px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border-hover);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+      transform: translateY(20px);
+      transition: transform 0.25s ease;
+      position: relative;
+    }
+
+    .modal-overlay.open .modal {
+      transform: translateY(0);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .modal-close:hover {
+      color: var(--text-primary);
+      background: var(--accent-glow);
+    }
+
+    .modal-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--accent-glow);
+      border: 1px solid var(--border-hover);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 20px;
+    }
+
+    .modal-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .modal-sub {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 7px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-hover);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.95rem;
+      padding: 11px 14px;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .form-submit {
+      width: 100%;
+      margin-top: 8px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+    }
+
+    .form-submit:hover {
+      background: var(--accent-light);
+      box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .form-note {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .success-state {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .success-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .success-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .success-msg {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ─── FOOTER ─── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 40px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .footer-brand {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+
+    .footer-brand span {
+      color: var(--accent);
+    }
+
+    .footer-info {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .footer-info a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+
+    .footer-info a:hover {
+      text-decoration: underline;
+    }
+
+    .footer-powered {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .footer-powered a {
+      color: var(--accent-light);
+      text-decoration: none;
+    }
+
+    /* ─── DIVIDER ─── */
+    .section-divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border), transparent);
+      margin: 0;
+    }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 900px) {
+      .hero-inner {
+        grid-template-columns: 1fr;
+        gap: 48px;
+        text-align: center;
+      }
+
+      .hero-actions {
+        justify-content: center;
+      }
+
+      .hero-stats {
+        justify-content: center;
+      }
+
+      .hero-sub {
+        margin: 0 auto 40px;
+      }
+
+      .detect-grid,
+      .who-grid,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .steps::before {
+        display: none;
+      }
+
+      .pricing-grid {
+        grid-template-columns: 1fr;
+        max-width: 420px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      nav {
+        padding: 0 20px;
+      }
+
+      .container {
+        padding: 0 20px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .hero-visual {
+        display: none;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .footer-powered {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="grid-bg"></div>
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+
+  <!-- ─── NAV ─── -->
+  <nav>
+    <a href="#" class="nav-logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Shield body -->
+        <path d="M18 3L5 8.5V18C5 25.2 10.8 31.8 18 33C25.2 31.8 31 25.2 31 18V8.5L18 3Z" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round"/>
+        <!-- Eye -->
+        <ellipse cx="18" cy="18" rx="7" ry="4.5" stroke="#3b82f6" stroke-width="1.5"/>
+        <circle cx="18" cy="18" r="2.5" fill="#3b82f6"/>
+        <!-- Pupil -->
+        <circle cx="18" cy="18" r="1" fill="white"/>
+        <!-- Lashes top -->
+        <line x1="18" y1="12.5" x2="18" y2="11" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="21.5" y1="13.2" x2="22.5" y2="11.9" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+        <line x1="14.5" y1="13.2" x2="13.5" y2="11.9" stroke="#60a5fa" stroke-width="1.2" stroke-linecap="round"/>
+      </svg>
+      <span class="logo-wordmark">Sentine<span>ll</span></span>
+    </a>
+
+    <ul class="nav-links">
+      <li><a href="#how" data-i18n="nav-how">Cómo funciona</a></li>
+      <li><a href="#detect" data-i18n="nav-detect">Qué detectamos</a></li>
+      <li><a href="#pricing" data-i18n="nav-pricing">Precios</a></li>
+    </ul>
+
+    <div class="nav-right">
+      <div class="lang-switcher">
+        <button class="lang-btn" id="btn-es" onclick="setLang('es')">ES</button>
+        <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+      </div>
+      <button class="nav-cta" onclick="openModal()" data-i18n="cta-main">Análisis gratuito</button>
+    </div>
+  </nav>
+
+  <!-- ─── HERO ─── -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="badge-dot"></span>
+            <span data-i18n="badge">Monitorización activa 24/7</span>
+          </div>
+          <h1 class="hero-title">
+            <span data-i18n="hero-title-line1">Tus servicios,</span><br>
+            <span class="highlight" data-i18n="hero-title-line2">vigilados 24/7</span>
+          </h1>
+          <p class="hero-sub" data-i18n="hero-sub">
+            Sentinell escanea tus webs y servicios online en busca de vulnerabilidades de seguridad — y te avisa antes de que lo hagan los atacantes. Sin configuración.
+          </p>
+          <div class="hero-actions">
+            <button class="btn-primary" onclick="openModal()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span data-i18n="cta-main">Análisis gratuito</span>
+            </button>
+            <a href="#how" class="btn-secondary">
+              <span data-i18n="cta-secondary">Cómo funciona</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">100+</div>
+              <div class="stat-label" data-i18n="stat-1">Checks por servicio</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">&lt;24h</div>
+              <div class="stat-label" data-i18n="stat-2">Tiempo de respuesta</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">30€</div>
+              <div class="stat-label" data-i18n="stat-3">Al año</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="terminal-card">
+            <div class="terminal-bar">
+              <div class="terminal-dot dot-red"></div>
+              <div class="terminal-dot dot-yellow"></div>
+              <div class="terminal-dot dot-green"></div>
+              <span class="terminal-title">sentinell — scan</span>
+            </div>
+
+            <div class="scan-line"><span class="prefix">$</span><span class="text">sentinell scan myshop.com</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="dim">Resolving target...</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="ok">✓</span><span class="text"> TLS certificate — valid</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="ok">✓</span><span class="text"> HTTP headers — ok</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="warn">⚠</span><span class="text"> WordPress 6.3 — EOL soon</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="err">✗</span><span class="text"> .env file — EXPOSED</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="err">✗</span><span class="text"> wp-config.php — readable</span></div>
+            <div class="scan-line"><span class="prefix">›</span><span class="dim">Checking 43 more vectors...</span><span class="cursor"></span></div>
+
+            <div class="scan-alert">
+              <div class="alert-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                2 CRITICAL — alerting owner
+              </div>
+              <div class="alert-body">→ Email sent to: admin@myshop.com<br>→ Report generated with fix steps</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ─── HOW IT WORKS ─── -->
+  <section id="how">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label" data-i18n="how-label">Proceso</div>
+        <h2 class="section-title" data-i18n="how-title">Así funciona Sentinell</h2>
+        <p class="section-sub" data-i18n="how-sub">Sin agentes instalados, sin acceso a tu servidor. Escaneamos desde fuera, como lo haría un atacante.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-number">
+            <span class="step-icon">🔍</span>
+          </div>
+          <h3 class="step-title" data-i18n="step1-title">Escaneamos</h3>
+          <p class="step-desc" data-i18n="step1-desc">Analizamos tu dominio y servicios online con más de 100 checks automatizados: cabeceras HTTP, archivos expuestos, versiones de software, configuraciones incorrectas y CVEs conocidos.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">
+            <span class="step-icon">⚡</span>
+          </div>
+          <h3 class="step-title" data-i18n="step2-title">Encontramos problemas</h3>
+          <p class="step-desc" data-i18n="step2-desc">Clasificamos los hallazgos por gravedad. Desde configuraciones menores hasta vulnerabilidades críticas que pueden exponer datos de tus clientes o comprometer tu servidor.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">
+            <span class="step-icon">🔔</span>
+          </div>
+          <h3 class="step-title" data-i18n="step3-title">Te avisamos</h3>
+          <p class="step-desc" data-i18n="step3-desc">Recibes un informe claro con los problemas encontrados y pasos para resolverlos. Con el plan Pro, también podemos encargarnos de los arreglos por ti.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ─── WHAT WE DETECT ─── -->
+  <section id="detect">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label" data-i18n="detect-label">Cobertura</div>
+        <h2 class="section-title" data-i18n="detect-title">Qué detectamos</h2>
+        <p class="section-sub" data-i18n="detect-sub">Vulnerabilidades reales que los atacantes buscan activamente cada día.</p>
+      </div>
+
+      <div class="detect-grid">
+        <div class="detect-card">
+          <div class="detect-icon-wrap">📂</div>
+          <h3 class="detect-title" data-i18n="detect1-title">Archivos de configuración expuestos</h3>
+          <p class="detect-desc" data-i18n="detect1-desc">Archivos sensibles accesibles públicamente que pueden revelar contraseñas de base de datos, claves API y credenciales de servidor.</p>
+          <div class="detect-tags">
+            <span class="tag">wp-config.php</span>
+            <span class="tag">.env</span>
+            <span class="tag">.htaccess</span>
+            <span class="tag">config.json</span>
+            <span class="tag">.git/</span>
+          </div>
+        </div>
+
+        <div class="detect-card">
+          <div class="detect-icon-wrap">💀</div>
+          <h3 class="detect-title" data-i18n="detect2-title">Software obsoleto con CVEs conocidos</h3>
+          <p class="detect-desc" data-i18n="detect2-desc">Versiones de WordPress, plugins, PHP, servidores web y librerías con vulnerabilidades públicamente documentadas y exploits activos.</p>
+          <div class="detect-tags">
+            <span class="tag">WordPress EOL</span>
+            <span class="tag">PHP &lt; 8.1</span>
+            <span class="tag">Apache CVEs</span>
+            <span class="tag">Plugin vulns</span>
+          </div>
+        </div>
+
+        <div class="detect-card">
+          <div class="detect-icon-wrap">🔓</div>
+          <h3 class="detect-title" data-i18n="detect3-title">Configuraciones erróneas y fugas de datos</h3>
+          <p class="detect-desc" data-i18n="detect3-desc">Cabeceras HTTP mal configuradas, CORS permisivos, directorios listables, formularios sin protección CSRF y endpoints de admin expuestos.</p>
+          <div class="detect-tags">
+            <span class="tag">Open redirects</span>
+            <span class="tag">Missing CSP</span>
+            <span class="tag">CORS wildcard</span>
+            <span class="tag">Directory listing</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ─── WHO IT'S FOR ─── -->
+  <section id="who">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label" data-i18n="who-label">Para quién</div>
+        <h2 class="section-title" data-i18n="who-title">Hecho para quien construye online</h2>
+        <p class="section-sub" data-i18n="who-sub">No hace falta ser una empresa grande para necesitar seguridad. Cualquier servicio online es un objetivo.</p>
+      </div>
+
+      <div class="who-grid">
+        <div class="who-card">
+          <span class="who-emoji">🛒</span>
+          <h3 class="who-title" data-i18n="who1-title">Tiendas WooCommerce</h3>
+          <p class="who-desc" data-i18n="who1-desc">Proteges los datos de pago y envío de tus clientes. Una brecha puede costarte multas RGPD y la confianza de tu audiencia.</p>
+        </div>
+
+        <div class="who-card">
+          <span class="who-emoji">🚀</span>
+          <h3 class="who-title" data-i18n="who2-title">SaaS y proyectos indie</h3>
+          <p class="who-desc" data-i18n="who2-desc">Tu API, tu panel de admin, tu webhook de Stripe — cada endpoint es una superficie de ataque. Monitorízalos todos.</p>
+        </div>
+
+        <div class="who-card">
+          <span class="who-emoji">🌐</span>
+          <h3 class="who-title" data-i18n="who3-title">Cualquier servicio online</h3>
+          <p class="who-desc" data-i18n="who3-desc">Portales corporativos, intranets expuestas, herramientas internas, blogs con formularios de contacto — si está en internet, necesita vigilancia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ─── PRICING ─── -->
+  <section id="pricing">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label" data-i18n="pricing-label">Precios</div>
+        <h2 class="section-title" data-i18n="pricing-title">Simple y honesto</h2>
+        <p class="section-sub" data-i18n="pricing-sub">Empieza gratis. Escala cuando necesites monitorización continua.</p>
+      </div>
+
+      <div class="pricing-grid">
+        <!-- Free -->
+        <div class="pricing-card">
+          <div class="plan-name" data-i18n="plan-free-name">Gratuito</div>
+          <div class="plan-price">0<sup>€</sup></div>
+          <div class="plan-period" data-i18n="plan-free-period">Una vez</div>
+          <ul class="plan-features">
+            <li><span class="feature-check">✓</span><span data-i18n="free-f1">Escaneo completo de tu dominio</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="free-f2">Informe de vulnerabilidades por email</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="free-f3">Clasificación por gravedad</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="free-f4">Pasos de resolución incluidos</span></li>
+          </ul>
+          <button class="plan-cta" onclick="openModal()" data-i18n="plan-free-cta">Obtener análisis gratuito</button>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card featured">
+          <div class="pricing-badge" data-i18n="plan-pro-badge">Más popular</div>
+          <div class="plan-name" data-i18n="plan-pro-name">Pro</div>
+          <div class="plan-price">30<sup>€</sup></div>
+          <div class="plan-period" data-i18n="plan-pro-period">al año · por dominio</div>
+          <ul class="plan-features">
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f1">Todo lo del plan gratuito</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f2">Monitorización continua 24/7</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f3">Alertas prioritarias en tiempo real</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f4">Soporte de mantenimiento incluido</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f5">Arreglos opcionales gestionados</span></li>
+            <li><span class="feature-check">✓</span><span data-i18n="pro-f6">Historial de escaneos y evolución</span></li>
+          </ul>
+          <button class="plan-cta cta-primary" onclick="openModal()" data-i18n="plan-pro-cta">Empezar ahora</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── FOOTER ─── -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <a href="#" class="footer-logo">
+            <svg width="28" height="28" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 3L5 8.5V18C5 25.2 10.8 31.8 18 33C25.2 31.8 31 25.2 31 18V8.5L18 3Z" fill="rgba(59,130,246,0.12)" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round"/>
+              <ellipse cx="18" cy="18" rx="7" ry="4.5" stroke="#3b82f6" stroke-width="1.5"/>
+              <circle cx="18" cy="18" r="2.5" fill="#3b82f6"/>
+              <circle cx="18" cy="18" r="1" fill="white"/>
+            </svg>
+            <span class="footer-brand">Sentine<span>ll</span></span>
+          </a>
+          <div class="footer-info" style="margin-top: 8px;">
+            sentinell.utopiaia.com &nbsp;·&nbsp; <a href="mailto:hola@utopiaia.com">hola@utopiaia.com</a>
+          </div>
+        </div>
+
+        <div class="footer-powered">
+          <span data-i18n="footer-powered">Powered by</span> <a href="https://utopiaia.com" target="_blank" rel="noopener">UtopiaIA</a><br>
+          <span style="color: var(--text-muted); font-size: 0.75rem;" data-i18n="footer-rights">Responsible disclosure · Security monitoring</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ─── MODAL ─── -->
+  <div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <div id="modal-form-state">
+        <div class="modal-icon">🔍</div>
+        <h2 class="modal-title" data-i18n="modal-title">Análisis gratuito</h2>
+        <p class="modal-sub" data-i18n="modal-sub">Introduce tu dominio y te enviaremos un informe de vulnerabilidades en menos de 24 horas.</p>
+        <form onsubmit="handleSubmit(event)">
+          <div class="form-group">
+            <label class="form-label" data-i18n="form-domain-label">Dominio o URL</label>
+            <input type="text" class="form-input" id="domain-input" placeholder="mitienda.com" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="form-email-label">Email de contacto</label>
+            <input type="email" class="form-input" id="email-input" placeholder="tu@email.com" required />
+          </div>
+          <button type="submit" class="form-submit" data-i18n="form-submit">Solicitar análisis gratuito</button>
+          <p class="form-note" data-i18n="form-note">Sin spam. Sin acceso a tu servidor. Solo te contactamos con el informe.</p>
+        </form>
+      </div>
+      <div id="modal-success-state" style="display:none;">
+        <div class="success-state">
+          <div class="success-icon">✅</div>
+          <h3 class="success-title" data-i18n="success-title">¡Solicitud recibida!</h3>
+          <p class="success-msg" data-i18n="success-msg">Hemos recibido tu solicitud. Recibirás el informe de seguridad en tu email en menos de 24 horas.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── JS ─── -->
+  <script>
+    // ─── TRANSLATIONS ───
+    const i18n = {
+      es: {
+        'nav-how': 'Cómo funciona',
+        'nav-detect': 'Qué detectamos',
+        'nav-pricing': 'Precios',
+        'cta-main': 'Análisis gratuito',
+        'badge': 'Monitorización activa 24/7',
+        'hero-title-line1': 'Tus servicios,',
+        'hero-title-line2': 'vigilados 24/7',
+        'hero-sub': 'Sentinell escanea tus webs y servicios online en busca de vulnerabilidades de seguridad — y te avisa antes de que lo hagan los atacantes. Sin configuración.',
+        'cta-secondary': 'Cómo funciona',
+        'stat-1': 'Checks por servicio',
+        'stat-2': 'Tiempo de respuesta',
+        'stat-3': 'Al año',
+        'how-label': 'Proceso',
+        'how-title': 'Así funciona Sentinell',
+        'how-sub': 'Sin agentes instalados, sin acceso a tu servidor. Escaneamos desde fuera, como lo haría un atacante.',
+        'step1-title': 'Escaneamos',
+        'step1-desc': 'Analizamos tu dominio y servicios online con más de 100 checks automatizados: cabeceras HTTP, archivos expuestos, versiones de software, configuraciones incorrectas y CVEs conocidos.',
+        'step2-title': 'Encontramos problemas',
+        'step2-desc': 'Clasificamos los hallazgos por gravedad. Desde configuraciones menores hasta vulnerabilidades críticas que pueden exponer datos de tus clientes o comprometer tu servidor.',
+        'step3-title': 'Te avisamos',
+        'step3-desc': 'Recibes un informe claro con los problemas encontrados y pasos para resolverlos. Con el plan Pro, también podemos encargarnos de los arreglos por ti.',
+        'detect-label': 'Cobertura',
+        'detect-title': 'Qué detectamos',
+        'detect-sub': 'Vulnerabilidades reales que los atacantes buscan activamente cada día.',
+        'detect1-title': 'Archivos de configuración expuestos',
+        'detect1-desc': 'Archivos sensibles accesibles públicamente que pueden revelar contraseñas de base de datos, claves API y credenciales de servidor.',
+        'detect2-title': 'Software obsoleto con CVEs conocidos',
+        'detect2-desc': 'Versiones de WordPress, plugins, PHP, servidores web y librerías con vulnerabilidades públicamente documentadas y exploits activos.',
+        'detect3-title': 'Configuraciones erróneas y fugas de datos',
+        'detect3-desc': 'Cabeceras HTTP mal configuradas, CORS permisivos, directorios listables, formularios sin protección CSRF y endpoints de admin expuestos.',
+        'who-label': 'Para quién',
+        'who-title': 'Hecho para quien construye online',
+        'who-sub': 'No hace falta ser una empresa grande para necesitar seguridad. Cualquier servicio online es un objetivo.',
+        'who1-title': 'Tiendas WooCommerce',
+        'who1-desc': 'Proteges los datos de pago y envío de tus clientes. Una brecha puede costarte multas RGPD y la confianza de tu audiencia.',
+        'who2-title': 'SaaS y proyectos indie',
+        'who2-desc': 'Tu API, tu panel de admin, tu webhook de Stripe — cada endpoint es una superficie de ataque. Monitorízalos todos.',
+        'who3-title': 'Cualquier servicio online',
+        'who3-desc': 'Portales corporativos, intranets expuestas, herramientas internas, blogs con formularios de contacto — si está en internet, necesita vigilancia.',
+        'pricing-label': 'Precios',
+        'pricing-title': 'Simple y honesto',
+        'pricing-sub': 'Empieza gratis. Escala cuando necesites monitorización continua.',
+        'plan-free-name': 'Gratuito',
+        'plan-free-period': 'Una vez',
+        'free-f1': 'Escaneo completo de tu dominio',
+        'free-f2': 'Informe de vulnerabilidades por email',
+        'free-f3': 'Clasificación por gravedad',
+        'free-f4': 'Pasos de resolución incluidos',
+        'plan-free-cta': 'Obtener análisis gratuito',
+        'plan-pro-badge': 'Más popular',
+        'plan-pro-name': 'Pro',
+        'plan-pro-period': 'al año · por dominio',
+        'pro-f1': 'Todo lo del plan gratuito',
+        'pro-f2': 'Monitorización continua 24/7',
+        'pro-f3': 'Alertas prioritarias en tiempo real',
+        'pro-f4': 'Soporte de mantenimiento incluido',
+        'pro-f5': 'Arreglos opcionales gestionados',
+        'pro-f6': 'Historial de escaneos y evolución',
+        'plan-pro-cta': 'Empezar ahora',
+        'footer-powered': 'Powered by',
+        'footer-rights': 'Responsible disclosure · Security monitoring',
+        'modal-title': 'Análisis gratuito',
+        'modal-sub': 'Introduce tu dominio y te enviaremos un informe de vulnerabilidades en menos de 24 horas.',
+        'form-domain-label': 'Dominio o URL',
+        'form-email-label': 'Email de contacto',
+        'form-submit': 'Solicitar análisis gratuito',
+        'form-note': 'Sin spam. Sin acceso a tu servidor. Solo te contactamos con el informe.',
+        'success-title': '¡Solicitud recibida!',
+        'success-msg': 'Hemos recibido tu solicitud. Recibirás el informe de seguridad en tu email en menos de 24 horas.',
+      },
+      en: {
+        'nav-how': 'How it works',
+        'nav-detect': 'What we detect',
+        'nav-pricing': 'Pricing',
+        'cta-main': 'Free scan',
+        'badge': 'Active monitoring 24/7',
+        'hero-title-line1': 'Your services,',
+        'hero-title-line2': 'watched 24/7',
+        'hero-sub': 'Sentinell scans your websites and online services for security vulnerabilities — and alerts you before attackers find them. No setup required.',
+        'cta-secondary': 'How it works',
+        'stat-1': 'Checks per service',
+        'stat-2': 'Response time',
+        'stat-3': 'Per year',
+        'how-label': 'Process',
+        'how-title': 'How Sentinell works',
+        'how-sub': 'No agents to install, no server access needed. We scan from the outside — just like an attacker would.',
+        'step1-title': 'We scan',
+        'step1-desc': 'We analyze your domain and online services with over 100 automated checks: HTTP headers, exposed files, software versions, misconfigurations, and known CVEs.',
+        'step2-title': 'We find issues',
+        'step2-desc': 'We classify findings by severity — from minor misconfigurations to critical vulnerabilities that could expose your customers\' data or compromise your server.',
+        'step3-title': 'We alert you',
+        'step3-desc': 'You receive a clear report with issues found and steps to resolve them. With the Pro plan, we can also handle the fixes for you.',
+        'detect-label': 'Coverage',
+        'detect-title': 'What we detect',
+        'detect-sub': 'Real vulnerabilities that attackers actively scan for every day.',
+        'detect1-title': 'Exposed config files',
+        'detect1-desc': 'Sensitive files accessible publicly that can reveal database passwords, API keys, and server credentials.',
+        'detect2-title': 'End-of-life software with known CVEs',
+        'detect2-desc': 'Versions of WordPress, plugins, PHP, web servers and libraries with publicly documented vulnerabilities and active exploits.',
+        'detect3-title': 'Misconfigurations and data leaks',
+        'detect3-desc': 'Misconfigured HTTP headers, permissive CORS policies, listable directories, forms without CSRF protection, and exposed admin endpoints.',
+        'who-label': 'Who it\'s for',
+        'who-title': 'Built for people who build online',
+        'who-sub': 'You don\'t need to be a big company to need security. Any online service is a target.',
+        'who1-title': 'WooCommerce shop owners',
+        'who1-desc': 'Protect your customers\' payment and shipping data. A breach can cost you GDPR fines and the trust of your audience.',
+        'who2-title': 'SaaS founders & indie hackers',
+        'who2-desc': 'Your API, admin panel, Stripe webhook — every endpoint is an attack surface. Monitor them all.',
+        'who3-title': 'Anyone with a service online',
+        'who3-desc': 'Corporate portals, exposed intranets, internal tools, blogs with contact forms — if it\'s on the internet, it needs watching.',
+        'pricing-label': 'Pricing',
+        'pricing-title': 'Simple and honest',
+        'pricing-sub': 'Start free. Scale when you need continuous monitoring.',
+        'plan-free-name': 'Free',
+        'plan-free-period': 'One time',
+        'free-f1': 'Full scan of your domain',
+        'free-f2': 'Vulnerability report via email',
+        'free-f3': 'Severity classification',
+        'free-f4': 'Resolution steps included',
+        'plan-free-cta': 'Get free scan',
+        'plan-pro-badge': 'Most popular',
+        'plan-pro-name': 'Pro',
+        'plan-pro-period': 'per year · per domain',
+        'pro-f1': 'Everything in the free plan',
+        'pro-f2': 'Continuous 24/7 monitoring',
+        'pro-f3': 'Priority real-time alerts',
+        'pro-f4': 'Maintenance support included',
+        'pro-f5': 'Optional managed fixes',
+        'pro-f6': 'Scan history and trend tracking',
+        'plan-pro-cta': 'Get started',
+        'footer-powered': 'Powered by',
+        'footer-rights': 'Responsible disclosure · Security monitoring',
+        'modal-title': 'Free security scan',
+        'modal-sub': 'Enter your domain and we\'ll send you a vulnerability report within 24 hours.',
+        'form-domain-label': 'Domain or URL',
+        'form-email-label': 'Contact email',
+        'form-submit': 'Request free scan',
+        'form-note': 'No spam. No server access. We only contact you with the report.',
+        'success-title': 'Request received!',
+        'success-msg': 'We\'ve got your request. You\'ll receive the security report in your email within 24 hours.',
+      }
+    };
+
+    // ─── LANG DETECTION & SWITCHING ───
+    let currentLang = 'es';
+
+    function detectLang() {
+      const browserLang = (navigator.language || navigator.userLanguage || 'es').substring(0, 2).toLowerCase();
+      return browserLang === 'en' ? 'en' : 'es';
+    }
+
+    function setLang(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang;
+
+      // Update button states
+      document.getElementById('btn-es').classList.toggle('active', lang === 'es');
+      document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+
+      // Update all translated elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (i18n[lang] && i18n[lang][key]) {
+          el.textContent = i18n[lang][key];
+        }
+      });
+
+      // Update placeholder text
+      const domainInput = document.getElementById('domain-input');
+      if (domainInput) {
+        domainInput.placeholder = lang === 'en' ? 'myshop.com' : 'mitienda.com';
+      }
+      const emailInput = document.getElementById('email-input');
+      if (emailInput) {
+        emailInput.placeholder = lang === 'en' ? 'you@email.com' : 'tu@email.com';
+      }
+    }
+
+    // ─── MODAL ───
+    function openModal() {
+      document.getElementById('modal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('modal')) {
+        closeModal();
+      }
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const domain = document.getElementById('domain-input').value;
+      const email = document.getElementById('email-input').value;
+
+      // Encode and send via mailto (simple no-backend approach)
+      const subject = encodeURIComponent('Sentinell — Free Scan Request');
+      const body = encodeURIComponent(`Domain: ${domain}\nEmail: ${email}`);
+      window.location.href = `mailto:hola@utopiaia.com?subject=${subject}&body=${body}`;
+
+      // Show success state
+      document.getElementById('modal-form-state').style.display = 'none';
+      document.getElementById('modal-success-state').style.display = 'block';
+
+      // Re-translate the success state
+      setLang(currentLang);
+    }
+
+    // Keyboard nav
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ─── INIT ───
+    document.addEventListener('DOMContentLoaded', function () {
+      const lang = detectLang();
+      setLang(lang);
+    });
+  </script>
+</body>
+</html>

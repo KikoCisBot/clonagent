@@ -4,7 +4,7 @@ import { api } from '../api.js';
 
 const SEED = {
   role: 'assistant',
-  content: '¡Hola! Soy ClonAgent Builder. Te ayudo a crear o editar agentes que procesan correo electrónico.\n\nCada agente nuevo lleva por defecto su propio buzón en `bot.utopiaia.com` con IMAP/SMTP listo. Solo dime:\n• Para qué proyecto es\n• Qué emails están autorizados a escribirle\n\nY te lo monto.',
+  content: '¡Hola! Soy ClonAgent Builder.\n\nDime qué quieres automatizar y lo monto desde cero: creo el proyecto, la base de datos, la web y el buzón de correo — todo listo para funcionar. Solo cuéntame:\n• Qué hace el agente (qué tipo de tareas resuelve)\n• Quién puede escribirle (uno o varios emails)\n\nSi ya tienes un proyecto o repo propio, dímelo y lo conecto. Si no, lo creo yo.',
 };
 
 export default function Chat() {

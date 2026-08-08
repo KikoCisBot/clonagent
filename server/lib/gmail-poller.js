@@ -14,6 +14,35 @@ const agentSessions = require('./agent-sessions');
 const taskQueue     = require('./task-queue');
 
 const COMMAND_PREFIX = '!';
+
+// Detect auto-replies, OOO messages, bounces, marketing signatures etc.
+// Returns true if the email should be silently skipped.
+function isAutoReply(msg) {
+  const subject = (msg.subject || '').toLowerCase();
+  const from    = (msg.from    || '').toLowerCase();
+  const headers = msg.headers  || {};
+
+  // Standard auto-reply headers
+  if (headers['auto-submitted'] && headers['auto-submitted'] !== 'no') return true;
+  if (headers['x-autoreply'])       return true;
+  if (headers['x-autorespond'])     return true;
+  if (headers['precedence'] === 'bulk' || headers['precedence'] === 'auto-reply') return true;
+  if (headers['x-auto-response-suppress']) return true;
+
+  // Common subject patterns
+  const autoSubjects = [
+    'out of office', 'fuera de oficina', 'ausencia', 'vacaciones',
+    'automatic reply', 'respuesta automática', 'auto:', 'ndr:', 'delivery status',
+    'undeliverable', 'no se puede entregar', 'mailer-daemon',
+  ];
+  if (autoSubjects.some(s => subject.includes(s))) return true;
+
+  // Bounce / mailer-daemon senders
+  if (from.includes('mailer-daemon') || from.includes('postmaster@') ||
+      from.includes('no-reply') || from.includes('noreply')) return true;
+
+  return false;
+}
 const HELP_TEXT = `ClonAgent commands — send any of these to manage your agent:
 
   !help                      Show this message
@@ -145,6 +174,13 @@ async function checkAgent(agent) {
           if (m.uid) runPython(skillDir, [script, 'mark-read', m.uid]).catch(() => {});
         }
         processed++;
+        continue;
+      }
+
+      // Skip auto-replies / bounces — no point launching Claude for those
+      if (isAutoReply(last)) {
+        for (const m of msgs)
+          if (m.uid) runPython(skillDir, [script, 'mark-read', m.uid]).catch(() => {});
         continue;
       }
 
@@ -285,6 +321,14 @@ async function tick() {
 }
 
 function startPoller() {
+  // Recover any tasks stuck in-progress from a previous crash, and reconcile
+  // tasks whose dependency failed (they'd otherwise linger as 'pending').
+  const agents = listAgents().filter(a => a.enabled && a.ready);
+  for (const a of agents) {
+    taskQueue.recoverStaleTasks(a.id);
+    taskQueue.reconcileSkips(a.id);
+  }
+
   cron.schedule('* * * * *',   tick);          // email check: every 1 min
   cron.schedule('*/2 * * * *', tickExecutor);  // executor:    every 2 min
   console.log('[poller] started (email: 1min, executor: 2min)');

@@ -44,7 +44,8 @@ function newUuid() {
 
 // ── Core launch helper ─────────────────────────────────────────────────────
 
-const DEFAULT_MODEL = 'claude-sonnet-4-6';
+const DEFAULT_MODEL = 'claude-opus-4-8';
+const DEFAULT_EFFORT = 'max';
 
 async function _launch({ skillId, role, prompt, description, resumeClaudeId, model }) {
   const skillDir = path.join(os.homedir(), '.claude', 'skills', skillId);
@@ -64,6 +65,7 @@ async function _launch({ skillId, role, prompt, description, resumeClaudeId, mod
     '--output-format', 'stream-json', '--verbose',
     '--dangerously-skip-permissions',
     '--model', resolvedModel,
+    '--effort', DEFAULT_EFFORT,
   ];
   if (resumeClaudeId && UUID_RE.test(resumeClaudeId)) args.push('--resume', resumeClaudeId);
   args.push('-p', `/${skillId}\n\n${prompt}`);
@@ -94,7 +96,7 @@ async function launchScheduler(agent, { from, subject, threadId }) {
     return null;
   }
   if (agent.spendingLimitMonthly != null) {
-    const spent = getMonthlySpend(skillId);
+    const spent = await getMonthlySpend(skillId);
     if (spent >= agent.spendingLimitMonthly) {
       console.warn(`[runner] ${skillId}: monthly limit $${agent.spendingLimitMonthly} reached (spent $${spent.toFixed(4)}) — launch blocked`);
       return null;
@@ -115,12 +117,24 @@ Nueva comunicación recibida:
 Tu tarea (sé rápido y concreto):
 1. Lee el email: python3 mail_client.py get-thread "${threadId}"
 2. Lee el fichero de tareas actual: cat agent-tasks.json (puede no existir aún)
-3. Añade las tareas necesarias a agent-tasks.json en formato JSON:
-   { "id": "<uuid4>", "title": "...", "description": "...", "priority": 1,
-     "status": "pending", "threadId": "${threadId}", "from": "${from}",
-     "createdAt": "<iso>" }
-   - priority 1=urgente, 2=normal, 3=baja
-   - No dupliques tareas ya existentes para el mismo threadId
+3. Decide qué tareas hay que hacer. Por cada tarea, añádela a agent-tasks.json con esta forma:
+   {
+     "id": "<uuid4>",
+     "title": "...",
+     "description": "...",
+     "priority": 1,
+     "status": "pending",
+     "threadId": "${threadId}",
+     "from": "${from}",
+     "createdAt": "<iso>",
+     "retries": 0,
+     "log": [],
+     "dependsOn": []
+   }
+   - priority: 1=urgente, 2=normal, 3=baja
+   - dependsOn: lista de IDs de otras tareas en este fichero que deben estar "done" primero (vacío si independiente)
+   - No añadas tareas si el threadId ya existe en tasks[] con cualquier status distinto a "failed"
+   - Si existe con status "failed", no añadas nada — el ejecutor lo reintentará automáticamente
 4. Actualiza el campo "plan" con tu análisis breve de la situación
 5. Escribe el fichero actualizado. El ejecutor se encarga de ejecutar las tareas.
 6. Sal cuando hayas terminado de planificar.
@@ -148,13 +162,13 @@ async function launchExecutor(agent) {
     return null;
   }
   if (agent.spendingLimitMonthly != null) {
-    const spent = getMonthlySpend(skillId);
+    const spent = await getMonthlySpend(skillId);
     if (spent >= agent.spendingLimitMonthly) {
       console.warn(`[runner] ${skillId}: monthly limit $${agent.spendingLimitMonthly} reached (spent $${spent.toFixed(4)}) — executor blocked`);
       return null;
     }
   }
-  if (!taskQueue.hasPending(skillId)) return null;
+  if (!taskQueue.hasPendingReady(skillId)) return null;
 
   const sess = agentSessions.get(skillId);
   const resumeClaudeId = sess.executorClaudeId || null;
@@ -164,18 +178,24 @@ async function launchExecutor(agent) {
 
 Ejecuta las tareas pendientes de agent-tasks.json.
 
-Proceso (repite hasta que no haya más tareas pendientes):
+Proceso (repite hasta que no haya más tareas ejecutables):
 1. Lee agent-tasks.json
-2. Toma la tarea con status="pending" de mayor prioridad (1=urgente)
-3. Actualiza su status a "in-progress" en el fichero
-4. Ejecuta la tarea (responder emails, analizar datos, lo que corresponda)
-5. Actualiza la tarea: status="done" o "failed", result="descripción breve", updatedAt=<iso>
-6. Si quedan más tareas pending, vuelve al paso 1
-7. Cuando no haya ninguna tarea pending, sal
+2. Toma la tarea con status="pending" de mayor prioridad (1=urgente) cuyo dependsOn[] esté vacío o todas sus dependencias estén "done". Si ninguna cumple esto, sal.
+3. Actualiza su status a "in-progress" en el fichero; añade entrada al log[]: { "ts": "<iso>", "msg": "Iniciando: <título>" }
+4. Ejecuta la tarea (responder emails, analizar datos, desplegar código, lo que corresponda)
+   - Añade entradas al log[] con progreso relevante durante la ejecución
+5. Al terminar, actualiza la tarea:
+   - status: "done" o "failed"
+   - result: descripción breve del resultado
+   - updatedAt: <iso>
+   - Si retries >= 3 y vuelve a fallar: status="failed", result="Max reintentos alcanzados: <motivo>"
+6. Si quedan más tareas pending ejecutables (deps resueltas), vuelve al paso 1
+7. Cuando no haya ninguna tarea pending ejecutable, sal
 
 Reglas:
 - Marca "failed" (no crashees) si algo falla, y continúa con la siguiente
 - Usa mail_client.py para enviar respuestas de email
+- El campo log[] es visible al usuario — úsalo para reflejar progreso real, no mensajes genéricos
 - Sé conciso en los campos "result"
 
 Fichero de tareas: ${tasksFile}`;
@@ -207,7 +227,7 @@ async function launchAgent({ skillId, prompt, cwd, threadInfo, resumeSessionId }
 
   const args = [
     '--output-format', 'stream-json', '--verbose',
-    '--dangerously-skip-permissions', '--model', 'claude-sonnet-4-6',
+    '--dangerously-skip-permissions', '--model', DEFAULT_MODEL, '--effort', DEFAULT_EFFORT,
   ];
   if (resumeSessionId && UUID_RE.test(resumeSessionId)) args.push('--resume', resumeSessionId);
   args.push('-p', `/${skillId}\n\n${prompt}`);
@@ -217,7 +237,7 @@ async function launchAgent({ skillId, prompt, cwd, threadInfo, resumeSessionId }
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ sessionId, task: prompt, workdir: skillDir,
-      model: 'claude-sonnet-4-6', args }),
+      model: DEFAULT_MODEL, args }),
   });
   if (!resp.ok) throw new Error(`relay ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
   return { ...(await resp.json()), sessionId };

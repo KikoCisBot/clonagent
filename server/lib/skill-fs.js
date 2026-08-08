@@ -10,7 +10,27 @@ const TEMPLATES_ROOT = path.resolve(__dirname, '..', '..', 'templates');
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const REGISTRY_FILE = path.join(DATA_DIR, 'agents.json');
 
-const VERSIONABLE_FILES = ['SKILL.md', 'config.json', 'gmail_client.py'];
+const VERSIONABLE_FILES = ['SKILL.md', 'config.json', 'gmail_client.py', 'audit_cli.py', 'learnings.md'];
+
+// Self-improving store-audit skill: layered on top of a provider mail client.
+const STORE_AUDIT_DIR = path.join(TEMPLATES_ROOT, 'store-audit');
+const isStoreAudit = (x) => !!x && x.skillType === 'store-audit';
+
+// Overlay the store-audit files onto an already-provisioned skill folder.
+//   SKILL.md   → rendered, replaces the provider's generic SKILL.md
+//   audit_cli.py → logic, copied as-is (reads publicUrl from config.json at runtime)
+//   learnings.md → the agent's evolving playbook; SEEDED ONCE and never clobbered.
+function overlayStoreAudit(skillDir, vars) {
+  if (!fs.existsSync(STORE_AUDIT_DIR)) throw new Error('store-audit template not found');
+  fs.writeFileSync(path.join(skillDir, 'SKILL.md'),
+    renderTemplate(fs.readFileSync(path.join(STORE_AUDIT_DIR, 'SKILL.md'), 'utf8'), vars));
+  fs.copyFileSync(path.join(STORE_AUDIT_DIR, 'audit_cli.py'), path.join(skillDir, 'audit_cli.py'));
+  const learnDst = path.join(skillDir, 'learnings.md');
+  if (!fs.existsSync(learnDst)) {
+    fs.writeFileSync(learnDst,
+      renderTemplate(fs.readFileSync(path.join(STORE_AUDIT_DIR, 'learnings.md'), 'utf8'), vars));
+  }
+}
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -73,6 +93,17 @@ function refreshSkillScripts(skillId) {
     try { cur = fs.readFileSync(dst, 'utf8'); } catch {}
     if (cur !== want) { fs.writeFileSync(dst, want); updated = true; }
   }
+  // Store-audit skills also track audit_cli.py — but NEVER learnings.md, which is
+  // the agent's evolving brain and must survive reboots untouched.
+  if (isStoreAudit(cfg)) {
+    const src = path.join(STORE_AUDIT_DIR, 'audit_cli.py');
+    const dst = path.join(skillDir, 'audit_cli.py');
+    if (fs.existsSync(src)) {
+      const want = fs.readFileSync(src, 'utf8');
+      let cur = ''; try { cur = fs.readFileSync(dst, 'utf8'); } catch {}
+      if (cur !== want) { fs.writeFileSync(dst, want); updated = true; }
+    }
+  }
   return updated;
 }
 
@@ -131,6 +162,7 @@ function discoverAgents() {
       deployDir:  cfg.deployDir  || '',
       sshKey:     cfg.sshKey     || '',
       mailProvider: cfg.mailProvider || 'gmail',
+      skillType: cfg.skillType || null,
       enabled: false,
       pollMinutes: cfg.pollMinutes || 1,
       version: cfg.version || 1,
@@ -311,6 +343,16 @@ async function createAgent(spec) {
     fs.writeFileSync(dst, rendered);
   }
 
+  // Layer the self-improving store-audit behavior on top of the mail client.
+  if (isStoreAudit(spec)) {
+    overlayStoreAudit(skillDir, {
+      ID: spec.id, NAME: spec.name, DESCRIPTION: spec.description || '',
+      BOT_EMAIL: spec.botEmail, AUTHORIZED_SENDERS: spec.authorizedSenders,
+      VERSION: 'v1',
+      PUBLIC_URL: process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com',
+    });
+  }
+
   const cfg = {
     id: spec.id, name: spec.name,
     botEmail: spec.botEmail, authorizedSenders: spec.authorizedSenders,
@@ -318,6 +360,7 @@ async function createAgent(spec) {
     deployUser: spec.deployUser, deployDir: spec.deployDir,
     sshKey: spec.sshKey,
     mailProvider: provider,
+    skillType: spec.skillType || null,
     version: 1,
     publicUrl: process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com',
   };
@@ -338,6 +381,7 @@ async function createAgent(spec) {
     projectPath: spec.projectPath, deployHost: spec.deployHost,
     deployUser: spec.deployUser, deployDir: spec.deployDir, sshKey: spec.sshKey,
     mailProvider: provider,
+    skillType: spec.skillType || null,
     imapHost: spec.imapHost, imapPort: spec.imapPort, imapSsl: spec.imapSsl,
     smtpHost: spec.smtpHost, smtpPort: spec.smtpPort, smtpSsl: spec.smtpSsl,
     enabled: false,
@@ -383,6 +427,7 @@ function updateAgent(id, patch) {
       projectPath: next.projectPath, deployHost: next.deployHost,
       deployUser: next.deployUser, deployDir: next.deployDir, sshKey: next.sshKey,
       mailProvider: provider,
+      skillType: next.skillType || null,
       version: newVersion,
       spendingLimitMonthly: next.spendingLimitMonthly ?? null,
       publicUrl: process.env.PUBLIC_URL || 'https://clonagent.utopiaia.com',
@@ -398,7 +443,9 @@ function updateAgent(id, patch) {
     fs.writeFileSync(path.join(skillDir, 'config.json'), JSON.stringify(cfg, null, 2));
 
     const tplName = provider === 'imap' ? 'email-triage-imap' : 'email-triage';
-    const tplPath = path.join(TEMPLATES_ROOT, tplName, 'SKILL.md');
+    const tplPath = isStoreAudit(next)
+      ? path.join(STORE_AUDIT_DIR, 'SKILL.md')
+      : path.join(TEMPLATES_ROOT, tplName, 'SKILL.md');
     if (fs.existsSync(tplPath)) {
       const rendered = renderTemplate(fs.readFileSync(tplPath, 'utf8'), {
         ID:           next.id,
