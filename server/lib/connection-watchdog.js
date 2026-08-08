@@ -11,7 +11,7 @@ const path = require('path');
 const mailer = require('./mailer');
 
 const RELAY_URL   = process.env.AGENT_RELAY_URL || process.env.LITELLM_URL || 'http://localhost:3202';
-const ALERT_EMAIL = process.env.WATCHDOG_ALERT_EMAIL || 'kikocisneros@gmail.com';
+const ALERT_EMAIL = process.env.WATCHDOG_ALERT_EMAIL || '';
 const GRACE_MS    = parseInt(process.env.WATCHDOG_GRACE_MS || String(5 * 60 * 1000), 10); // 5 min
 const CHECK_MS    = parseInt(process.env.WATCHDOG_CHECK_MS || String(60 * 1000), 10);     // 1 min
 const STATE_FILE  = process.env.WATCHDOG_STATE_FILE || path.resolve(__dirname, '..', 'data', 'watchdog-state.json');
@@ -46,6 +46,7 @@ function fmtDuration(ms) {
 }
 
 async function alertDown(downSince) {
+  if (!ALERT_EMAIL) return;
   const since = new Date(downSince);
   await mailer.send({
     to: ALERT_EMAIL,
@@ -65,6 +66,7 @@ async function alertDown(downSince) {
 }
 
 async function alertRecovered(downSince) {
+  if (!ALERT_EMAIL) return;
   const downMs = downSince ? (Date.now() - new Date(downSince).getTime()) : 0;
   await mailer.send({
     to: ALERT_EMAIL,
@@ -109,7 +111,8 @@ async function tick() {
 }
 
 function startWatchdog() {
-  console.log(`[watchdog] started — relay=${RELAY_URL} grace=${fmtDuration(GRACE_MS)} alert=${ALERT_EMAIL}`);
+  console.log(`[watchdog] started — relay=${RELAY_URL} grace=${fmtDuration(GRACE_MS)} alert=${ALERT_EMAIL || '(disabled)'}`);
+  if (!ALERT_EMAIL) console.warn('[watchdog] WATCHDOG_ALERT_EMAIL not set — monitoring only, no emails will be sent.');
   setInterval(() => { tick().catch(e => console.warn('[watchdog] tick error:', e.message)); }, CHECK_MS);
   // First check shortly after boot (give the relay a moment).
   setTimeout(() => { tick().catch(() => {}); }, 15000);

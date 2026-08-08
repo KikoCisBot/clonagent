@@ -18,9 +18,10 @@ const https  = require('https');
 const { spawn } = require('child_process');
 const path   = require('path');
 const url    = require('url');
+const os     = require('os');
 
 const PORT             = parseInt(process.env.RELAY_PORT    || '3201', 10);
-const CLAUDE_BIN       = process.env.CLAUDE_BIN   || '/Users/kikocisneros/.local/bin/claude';
+const CLAUDE_BIN       = process.env.CLAUDE_BIN   || path.join(os.homedir(), '.local', 'bin', 'claude');
 const CONSOLE_URL      = process.env.CONSOLE_URL  || 'http://localhost:3100';
 const AUTH_TOKEN       = process.env.RELAY_TOKEN  || ''; // optional bearer token for relay itself
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'relay-internal-2026'; // must match console
@@ -363,8 +364,8 @@ const server = http.createServer(async (req, res) => {
 
     // Run WITHOUT ANTHROPIC_BASE_URL → Claude uses real Anthropic (subscription)
     // If no Anthropic API key is available, fall back to direct MLX call
-    const homeDir = process.env.HOME || '/Users/kikocisneros';
-    const userName = homeDir.split('/').pop() || 'kikocisneros';
+    const homeDir = os.homedir();
+    const userName = path.basename(homeDir) || 'user';
 
     // ── Spawn Claude CLI — uses OAuth subscription if no API key, or API key if set ──
     // Detect a REAL Anthropic API key (not the fake relay proxy key)
@@ -588,8 +589,8 @@ const server = http.createServer(async (req, res) => {
       // When running under launchd the environment is very sparse (only what's in the plist).
       // Claude needs USER, LOGNAME, TMPDIR, etc. to authenticate and run properly.
       // Build a complete env by combining launchd env with essential user vars.
-      const homeDir = process.env.HOME || `/Users/${process.env.USER || 'kikocisneros'}`;
-      const userName = homeDir.split('/').pop() || 'kikocisneros';
+      const homeDir = os.homedir();
+      const userName = process.env.USER || path.basename(homeDir) || 'user';
       const claudeEnv = {
         // Essential user environment
         HOME:       homeDir,

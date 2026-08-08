@@ -21,7 +21,7 @@ PARENT_ZONE="${PARENT_ZONE:-utopiaia.com}"
 ZONE_FILE="${ZONE_FILE:-/home/ubuntu/project-manager/dns/zones/${PARENT_ZONE}.zone}"
 [[ -f "$ZONE_FILE" ]] || ZONE_FILE="/home/ubuntu/agent-manager/dns/zones/${PARENT_ZONE}.zone"
 SERVER_IP="${SERVER_IP:-145.239.65.26}"
-LE_EMAIL="${LE_EMAIL:-kikocisneros@gmail.com}"
+LE_EMAIL="${LE_EMAIL:-admin@${PARENT_ZONE}}"
 COMPOSE="${COMPOSE:-docker compose -f docker-compose.mail.yml}"
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
